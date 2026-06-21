@@ -596,7 +596,12 @@ async function fetchServerTime() {
     { url: "https://worldtimeapi.org/api/timezone/Asia/Kolkata",
       parse: d => new Date(d.datetime) },
     { url: "https://timeapi.io/api/Time/current/zone?timeZone=Asia%2FKolkata",
-      parse: d => new Date(`${d.date}T${d.time}`) },
+      parse: d => {
+        // timeapi.io returns: date="2026-06-21", time="15:41:00.123"
+        const timeClean = (d.time||"").split(".")[0]; // remove milliseconds
+        return new Date(`${d.date}T${timeClean}+05:30`);
+      }
+    },
     { url: "https://worldclockapi.com/api/json/ist/now",
       parse: d => new Date(d.currentDateTime) },
   ];
@@ -604,40 +609,44 @@ async function fetchServerTime() {
   for (const api of APIs) {
     try {
       const controller = new AbortController();
-      const timeout    = setTimeout(() => controller.abort(), 4000);
+      const timeout    = setTimeout(() => controller.abort(), 5000);
       const res        = await fetch(api.url, { signal: controller.signal });
       clearTimeout(timeout);
-      const data       = await res.json();
-      serverTime       = api.parse(data);
-      isServerTime     = true;
+      if (!res.ok) continue;
+      const data = await res.json();
+      const parsed = api.parse(data);
 
-      // Update UI
-      document.getElementById("pillTime").className      = "status-pill pill-ok";
-      document.getElementById("timeStatus").textContent  = "✓ Server";
-      document.getElementById("timeSourceBadge").className = "time-source time-server";
-      document.getElementById("timeSourceBadge").textContent = "Server Time";
-      document.getElementById("timeWarning").style.display = "none";
+      // Validate — make sure Date is valid
+      if (!parsed || isNaN(parsed.getTime())) continue;
+
+      serverTime   = parsed;
+      isServerTime = true;
+
+      document.getElementById("pillTime").className         = "status-pill pill-ok";
+      document.getElementById("timeStatus").textContent     = "✓ Server";
+      document.getElementById("timeSourceBadge").className  = "time-source time-server";
+      document.getElementById("timeSourceBadge").textContent= "Server Time";
+      document.getElementById("timeWarning").style.display  = "none";
       updateZone();
       updateActionButton();
-      return; // Success — stop trying
+      return;
     } catch(e) {
-      // Try next API
       continue;
     }
   }
 
-  // All APIs failed — use local time
+  // All APIs failed — use device time
   serverTime   = new Date();
   isServerTime = false;
-  document.getElementById("pillTime").className       = "status-pill pill-info";
-  document.getElementById("timeStatus").textContent   = "⚠ Device Time";
-  document.getElementById("timeSourceBadge").className = "time-source time-local";
-  document.getElementById("timeSourceBadge").textContent = "Device Time";
-  document.getElementById("timeWarning").style.display = "flex";
+  document.getElementById("pillTime").className         = "status-pill pill-info";
+  document.getElementById("timeStatus").textContent     = "⚠ Device Time";
+  document.getElementById("timeSourceBadge").className  = "time-source time-local";
+  document.getElementById("timeSourceBadge").textContent= "Device Time";
+  document.getElementById("timeWarning").style.display  = "flex";
   updateZone();
   updateActionButton();
 
-  // Retry every 30 seconds
+  // Retry after 30 seconds
   setTimeout(fetchServerTime, 30000);
 }
 
@@ -646,9 +655,18 @@ async function fetchServerTime() {
 // ══════════════════════════════════════════════════════════════
 function tickTime() {
   if (!serverTime) return;
+
+  // Advance server time by 1 second
   serverTime = new Date(serverTime.getTime() + 1000);
-  // If using device time, re-sync occasionally
+
+  // If using device time — keep syncing with device
   if (!isServerTime) serverTime = new Date();
+
+  // Safety check — if date is invalid somehow, reset to device time
+  if (isNaN(serverTime.getTime())) {
+    serverTime = new Date();
+    isServerTime = false;
+  }
 
   const h = String(serverTime.getHours()).padStart(2,"0");
   const m = String(serverTime.getMinutes()).padStart(2,"0");
@@ -657,8 +675,12 @@ function tickTime() {
 
   const days   = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const day    = serverTime.getDay();
+  const date   = serverTime.getDate();
+  const mon    = serverTime.getMonth();
+  const year   = serverTime.getFullYear();
   document.getElementById("liveDate").textContent =
-    `${days[serverTime.getDay()]}, ${serverTime.getDate()} ${months[serverTime.getMonth()]} ${serverTime.getFullYear()}`;
+    `${days[day]}, ${date} ${months[mon]} ${year}`;
 
   updateZone();
   updateActionButton();
