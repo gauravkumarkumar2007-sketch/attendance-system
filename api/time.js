@@ -1,28 +1,36 @@
 // api/time.js — Vercel Serverless Function
-// Returns current IST time from server
-// No CORS issues — runs on Vercel server side
+// Returns current IST time components directly
 
 export default function handler(req, res) {
-  // Allow all origins
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
 
-  // Get current server time in IST (UTC+5:30)
-  const now = new Date();
+  // UTC timestamp
+  const utcMs = Date.now();
 
-  // Convert to IST
-  const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in ms
-  const istTime   = new Date(now.getTime() + istOffset);
+  // IST = UTC + 5 hours 30 minutes
+  const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
+  const istMs       = utcMs + istOffsetMs;
+  const istDate     = new Date(istMs);
 
-  // Return time details
+  // Use getUTC* because we manually shifted to IST
+  const hours   = istDate.getUTCHours();
+  const minutes = istDate.getUTCMinutes();
+  const seconds = istDate.getUTCSeconds();
+  const day     = istDate.getUTCDay();    // 0=Sun, 6=Sat
+  const date    = istDate.getUTCDate();
+  const month   = istDate.getUTCMonth(); // 0-11
+  const year    = istDate.getUTCFullYear();
+
   res.status(200).json({
-    datetime:    istTime.toISOString(),
-    timestamp:   istTime.getTime(),
-    hours:       istTime.getUTCHours(),
-    minutes:     istTime.getUTCMinutes(),
-    seconds:     istTime.getUTCSeconds(),
-    date:        istTime.toISOString().split("T")[0],
-    timezone:    "Asia/Kolkata",
-    utc_offset:  "+05:30",
+    utc_timestamp: utcMs,  // for client-side syncing
+    ist_hours:     hours,
+    ist_minutes:   minutes,
+    ist_seconds:   seconds,
+    ist_day:       day,
+    ist_date:      date,
+    ist_month:     month,
+    ist_year:      year,
+    timezone:      "Asia/Kolkata",
   });
 }
