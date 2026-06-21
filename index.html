@@ -285,7 +285,7 @@
     <p>Attendance System</p>
   </div>
   <div class="header-time">
-    <div class="time-display" id="liveTime">--:--:--</div>
+    <div class="time-display" id="liveTime">--:-- --</div>
     <div class="date-display" id="liveDate">Loading...</div>
     <span class="time-source time-local" id="timeSourceBadge">Local Time</span>
   </div>
@@ -565,7 +565,10 @@ const demoHistory = [
 // ══════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════
-let serverTime    = null;
+let serverTime    = null;  // UTC ms when we received server time
+let serverReceivedAt = null; // device ms when we received it
+let istH = 0, istM = 0, istS = 0; // IST components
+let istDay = 0, istDate = 1, istMonth = 0, istYear = 2026;
 let isServerTime  = false;
 let locationOK    = false;
 let locationLat   = null;
@@ -593,19 +596,12 @@ window.onload = () => {
 // ══════════════════════════════════════════════════════════════
 async function fetchServerTime() {
   const APIs = [
-    // 1st: Vercel own API — no CORS, most reliable
-    { url: "/api/time",
-      parse: d => new Date(d.timestamp) },
+    // 1st: Vercel own /api/time — no CORS, always reliable
+    { url: "/api/time", type: "vercel" },
     // 2nd: worldtimeapi fallback
-    { url: "https://worldtimeapi.org/api/timezone/Asia/Kolkata",
-      parse: d => new Date(d.datetime) },
+    { url: "https://worldtimeapi.org/api/timezone/Asia/Kolkata", type: "worldtime" },
     // 3rd: timeapi.io fallback
-    { url: "https://timeapi.io/api/Time/current/zone?timeZone=Asia%2FKolkata",
-      parse: d => {
-        const timeClean = (d.time||"").split(".")[0];
-        return new Date(`${d.date}T${timeClean}+05:30`);
-      }
-    },
+    { url: "https://timeapi.io/api/Time/current/zone?timeZone=Asia%2FKolkata", type: "timeapi" },
   ];
 
   for (const api of APIs) {
@@ -616,12 +612,52 @@ async function fetchServerTime() {
       clearTimeout(timeout);
       if (!res.ok) continue;
       const data = await res.json();
-      const parsed = api.parse(data);
 
-      // Validate — make sure Date is valid
-      if (!parsed || isNaN(parsed.getTime())) continue;
+      if (api.type === "vercel") {
+        // Our own API — returns IST components directly
+        if (typeof data.ist_hours === "undefined") continue;
+        istH     = data.ist_hours;
+        istM     = data.ist_minutes;
+        istS     = data.ist_seconds;
+        istDay   = data.ist_day;
+        istDate  = data.ist_date;
+        istMonth = data.ist_month;
+        istYear  = data.ist_year;
+        serverTime       = data.utc_timestamp;
+        serverReceivedAt = Date.now();
+      } else if (api.type === "worldtime") {
+        // worldtimeapi.org
+        const d = new Date(data.datetime);
+        if (isNaN(d.getTime())) continue;
+        // Convert to IST
+        const istMs  = d.getTime() + (5.5*60*60*1000);
+        const istD   = new Date(istMs);
+        istH     = istD.getUTCHours();
+        istM     = istD.getUTCMinutes();
+        istS     = istD.getUTCSeconds();
+        istDay   = istD.getUTCDay();
+        istDate  = istD.getUTCDate();
+        istMonth = istD.getUTCMonth();
+        istYear  = istD.getUTCFullYear();
+        serverTime       = d.getTime();
+        serverReceivedAt = Date.now();
+      } else if (api.type === "timeapi") {
+        const timeClean = (data.time||"").split(".")[0];
+        const d = new Date(`${data.date}T${timeClean}+05:30`);
+        if (isNaN(d.getTime())) continue;
+        const istMs  = d.getTime() + (5.5*60*60*1000);
+        const istD   = new Date(istMs);
+        istH     = istD.getUTCHours();
+        istM     = istD.getUTCMinutes();
+        istS     = istD.getUTCSeconds();
+        istDay   = istD.getUTCDay();
+        istDate  = istD.getUTCDate();
+        istMonth = istD.getUTCMonth();
+        istYear  = istD.getUTCFullYear();
+        serverTime       = d.getTime();
+        serverReceivedAt = Date.now();
+      }
 
-      serverTime   = parsed;
       isServerTime = true;
 
       document.getElementById("pillTime").className         = "status-pill pill-ok";
@@ -656,33 +692,50 @@ async function fetchServerTime() {
 // TICK CLOCK
 // ══════════════════════════════════════════════════════════════
 function tickTime() {
-  if (!serverTime) return;
-
-  // Advance server time by 1 second
-  serverTime = new Date(serverTime.getTime() + 1000);
-
-  // If using device time — keep syncing with device
-  if (!isServerTime) serverTime = new Date();
-
-  // Safety check — if date is invalid somehow, reset to device time
-  if (isNaN(serverTime.getTime())) {
-    serverTime = new Date();
-    isServerTime = false;
+  if (!serverTime) {
+    // No server time yet — show device time as fallback
+    const now  = new Date();
+    const istMs = now.getTime() + (5.5*60*60*1000);
+    const istD  = new Date(istMs);
+    istH     = istD.getUTCHours();
+    istM     = istD.getUTCMinutes();
+    istS     = istD.getUTCSeconds();
+    istDay   = istD.getUTCDay();
+    istDate  = istD.getUTCDate();
+    istMonth = istD.getUTCMonth();
+    istYear  = istD.getUTCFullYear();
+  } else if (isServerTime && serverReceivedAt) {
+    // Advance IST time based on elapsed device time since we got server time
+    const elapsedMs = Date.now() - serverReceivedAt;
+    const istMs     = serverTime + elapsedMs + (5.5*60*60*1000);
+    const istD      = new Date(istMs);
+    istH     = istD.getUTCHours();
+    istM     = istD.getUTCMinutes();
+    istS     = istD.getUTCSeconds();
+    istDay   = istD.getUTCDay();
+    istDate  = istD.getUTCDate();
+    istMonth = istD.getUTCMonth();
+    istYear  = istD.getUTCFullYear();
+  } else {
+    // Device time fallback
+    istS = (istS + 1) % 60;
+    if (istS === 0) {
+      istM = (istM + 1) % 60;
+      if (istM === 0) istH = (istH + 1) % 24;
+    }
   }
 
-  const h = String(serverTime.getHours()).padStart(2,"0");
-  const m = String(serverTime.getMinutes()).padStart(2,"0");
-  const s = String(serverTime.getSeconds()).padStart(2,"0");
-  document.getElementById("liveTime").textContent = `${h}:${m}:${s}`;
+  // Format AM/PM
+  const ampm  = istH >= 12 ? "PM" : "AM";
+  const h12   = istH % 12 || 12;
+  const mStr  = String(istM).padStart(2,"0");
+  const sStr  = String(istS).padStart(2,"0");
+  document.getElementById("liveTime").textContent = `${h12}:${mStr}:${sStr} ${ampm}`;
 
   const days   = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const day    = serverTime.getDay();
-  const date   = serverTime.getDate();
-  const mon    = serverTime.getMonth();
-  const year   = serverTime.getFullYear();
   document.getElementById("liveDate").textContent =
-    `${days[day]}, ${date} ${months[mon]} ${year}`;
+    `${days[istDay]}, ${istDate} ${months[istMonth]} ${istYear}`;
 
   updateZone();
   updateActionButton();
@@ -692,10 +745,10 @@ function tickTime() {
 // ZONE LOGIC
 // ══════════════════════════════════════════════════════════════
 function toMins(t) { const [h,m]=t.split(":").map(Number); return h*60+m; }
-function nowMins()  { if(!serverTime) return 0; return serverTime.getHours()*60+serverTime.getMinutes(); }
+function nowMins()  { return istH*60+istM; }
 
 function getZone() {
-  if (!serverTime) return "unknown";
+  if (!serverTime && !isServerTime) return "unknown";
   const now    = nowMins();
   const earlyE = toMins(CONFIG.earlyOT_end);
   const normE  = toMins(CONFIG.normal_end);
@@ -813,7 +866,7 @@ function updateActionButton() {
 // ACTION FLOW
 // ══════════════════════════════════════════════════════════════
 function startAction() {
-  if (!serverTime) { showToast("Time not loaded yet","error"); return; }
+  if (!serverTime && !isServerTime) { showToast("Time loading...","error"); return; }
   if (!locationOK) { showToast("📍 Go inside office first!","error"); return; }
   if (!isCheckedIn && todayRecord.checkout) { showToast("Day already complete!","error"); return; }
   document.getElementById("selfieModalTitle").textContent = isCheckedIn ? "📸 Check-out Selfie" : "📸 Check-in Selfie";
@@ -869,7 +922,7 @@ function confirmSelfie() {
 // CHECK-IN
 // ══════════════════════════════════════════════════════════════
 function processCheckin() {
-  const now=serverTime, t=formatTime(now), z=currentZone;
+  const now=null, t=formatTime(null), z=currentZone;
   let earlyOT=0, deduct=0;
   if (z==="early_ot") {
     earlyOT = Math.max(0, 10*60 - (now.getHours()*60+now.getMinutes()));
@@ -897,9 +950,9 @@ function processCheckin() {
 // CHECK-OUT
 // ══════════════════════════════════════════════════════════════
 function processCheckout() {
-  const now=serverTime, t=formatTime(now), z=currentZone;
-  const isSunday=now.getDay()===0, multi=isSunday?2:1;
-  const outMins=now.getHours()*60+now.getMinutes();
+  const now=null, t=formatTime(null), z=currentZone;
+  const isSunday=istDay===0, multi=isSunday?2:1;
+  const outMins=istH*60+istM;
   const inParsed=parseTime(todayRecord.checkin);
   const inMins=inParsed.h*60+inParsed.m;
   const workMins=outMins-inMins;
@@ -1021,9 +1074,11 @@ function showToast(msg,type="") {
 }
 
 function formatTime(d) {
-  let h=d.getHours(),m=d.getMinutes();
-  const ap=h>=12?"PM":"AM"; h=h%12||12;
-  return `${h}:${String(m).padStart(2,"0")} ${ap}`;
+  // d can be unused — always use current IST
+  const h   = istH, m = istM;
+  const ap  = h>=12?"PM":"AM";
+  const h12 = h%12||12;
+  return `${h12}:${String(m).padStart(2,"0")} ${ap}`;
 }
 function parseTime(s) {
   const [t,ap]=s.split(" "); let [h,m]=t.split(":").map(Number);
