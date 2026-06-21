@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="theme-color" content="#1a3a5c"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Attendance"/>
+  <link rel="manifest" href="manifest.json"/>
+  <title>Attendance System</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark-blue:   #1a3a5c;
+      --mid-blue:    #2563eb;
+      --light-blue:  #dbeafe;
+      --green:       #16a34a;
+      --light-green: #dcfce7;
+      --orange:      #ea580c;
+      --light-orange:#ffedd5;
+      --yellow:      #ca8a04;
+      --light-yellow:#fef9c3;
+      --red:         #dc2626;
+      --light-red:   #fee2e2;
+      --purple:      #7c3aed;
+      --light-purple:#f5f3ff;
+      --teal:        #0f766e;
+      --cooling:     #6366f1;
+      --gray:        #f1f5f9;
+      --dark-gray:   #334155;
+      --text:        #1e293b;
+      --subtext:     #64748b;
+      --white:       #ffffff;
+      --card-shadow: 0 2px 16px rgba(0,0,0,0.10);
+    }
+    html, body {
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #eef2f7;
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Header */
+    .header {
+      background: var(--dark-blue);
+      color: var(--white);
+      padding: 16px 20px 14px;
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left h1 { font-size: 18px; font-weight: 700; }
+    .header-left p  { font-size: 11px; opacity: 0.65; margin-top: 1px; }
+    .header-time    { text-align: right; }
+    .header-time .time-display { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .header-time .date-display { font-size: 11px; opacity: 0.65; margin-top: 1px; }
+    .time-source { font-size: 9px; padding: 2px 6px; border-radius: 8px; margin-top: 2px; display: inline-block; }
+    .time-server { background: var(--green); color: white; }
+    .time-local  { background: var(--yellow); color: white; }
+
+    /* Content */
+    .content { padding: 16px; max-width: 480px; margin: 0 auto; }
+
+    /* Cards */
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--card-shadow);
+    }
+    .card-title {
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--subtext); margin-bottom: 12px;
+    }
+
+    /* Zone Banner */
+    .zone-banner {
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .zone-banner .zone-icon { font-size: 28px; line-height: 1; }
+    .zone-banner .zone-info .zone-name { font-size: 15px; font-weight: 700; }
+    .zone-banner .zone-info .zone-desc { font-size: 12px; margin-top: 2px; opacity: 0.85; }
+    .zone-early-ot  { background: var(--light-green);  color: var(--green); }
+    .zone-normal    { background: var(--light-blue);   color: var(--mid-blue); }
+    .zone-manager   { background: var(--light-yellow); color: var(--yellow); }
+    .zone-late      { background: var(--light-red);    color: var(--red); }
+    .zone-cooling   { background: var(--light-purple); color: var(--purple); }
+    .zone-late-ot   { background: var(--light-orange); color: var(--orange); }
+    .zone-unknown   { background: var(--gray);         color: var(--dark-gray); }
+
+    /* Status Pills */
+    .status-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .status-pill {
+      flex: 1; border-radius: 12px; padding: 10px 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .status-pill .pill-icon { font-size: 18px; }
+    .status-pill .pill-text { display: flex; flex-direction: column; }
+    .status-pill .pill-label{ font-size: 10px; font-weight: 500; opacity: 0.7; }
+    .status-pill .pill-value{ font-size: 13px; font-weight: 700; }
+    .pill-ok   { background: var(--light-green);  color: var(--green); }
+    .pill-err  { background: var(--light-red);    color: var(--red); }
+    .pill-wait { background: var(--gray);          color: var(--dark-gray); }
+    .pill-info { background: var(--light-yellow);  color: var(--yellow); }
+
+    /* Employee Card */
+    .emp-card { display: flex; align-items: center; gap: 14px; }
+    .emp-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--dark-blue); color: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; flex-shrink: 0;
+    }
+    .emp-name  { font-size: 17px; font-weight: 700; }
+    .emp-id    { font-size: 12px; color: var(--subtext); margin-top: 2px; }
+    .emp-dept  { font-size: 12px; color: var(--subtext); }
+    .emp-badge {
+      margin-left: auto;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-present { background: var(--light-green); color: var(--green); }
+    .badge-absent  { background: var(--light-red);   color: var(--red); }
+
+    /* Action Button */
+    .action-btn {
+      width: 100%; border: none; border-radius: 16px;
+      padding: 18px; font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .action-btn:active { transform: scale(0.97); }
+    .btn-checkin  { background: var(--green);    color: var(--white); }
+    .btn-checkout { background: var(--orange);   color: var(--white); }
+    .btn-disabled { background: var(--gray);     color: var(--subtext); cursor: not-allowed; }
+
+    /* Today Record */
+    .record-row {
+      display: flex; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--gray);
+    }
+    .record-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .record-label { font-size: 13px; color: var(--subtext); }
+    .record-value { font-size: 13px; font-weight: 600; color: var(--text); }
+    .record-value.green  { color: var(--green); }
+    .record-value.orange { color: var(--orange); }
+    .record-value.red    { color: var(--red); }
+
+    /* Selfie */
+    .selfie-container { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 3/4; }
+    .selfie-video     { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    .selfie-canvas    { display: none; }
+    .selfie-preview   { width: 100%; height: 100%; object-fit: cover; }
+    .selfie-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.6));
+      padding: 16px; display: flex; justify-content: center;
+    }
+    .capture-btn {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--white); border: 4px solid rgba(255,255,255,0.5);
+      cursor: pointer; transition: transform 0.1s;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    .capture-btn:active { transform: scale(0.9); }
+
+    /* Steps */
+    .steps { display: flex; gap: 8px; margin-bottom: 16px; }
+    .step  { flex: 1; height: 4px; border-radius: 4px; background: var(--gray); transition: background 0.3s; }
+    .step.active { background: var(--mid-blue); }
+    .step.done   { background: var(--green); }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 24px 24px 0 0;
+      padding: 24px 20px 40px; width: 100%; max-width: 480px;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal-sub   { font-size: 13px; color: var(--subtext); margin-bottom: 20px; }
+    .modal-close {
+      float: right; background: var(--gray); border: none;
+      border-radius: 50%; width: 32px; height: 32px;
+      font-size: 16px; cursor: pointer; line-height: 32px; text-align: center;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--dark-gray); color: var(--white);
+      padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 500;
+      z-index: 300; transition: transform 0.3s; white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .toast.show    { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--green); }
+    .toast.error   { background: var(--red); }
+
+    /* Success Screen */
+    .success-screen { text-align: center; padding: 20px 0; }
+    .success-icon  { font-size: 56px; margin-bottom: 12px; }
+    .success-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .success-sub   { font-size: 14px; color: var(--subtext); }
+    .success-detail {
+      background: var(--gray); border-radius: 14px;
+      padding: 16px; margin-top: 20px; text-align: left;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white); border-top: 1px solid #e2e8f0;
+      display: flex; z-index: 100; max-width: 480px; margin: 0 auto;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; padding: 10px 0 14px;
+      cursor: pointer; border: none; background: none;
+      color: var(--subtext); gap: 3px;
+    }
+    .nav-item.active { color: var(--dark-blue); }
+    .nav-item .nav-icon  { font-size: 22px; }
+    .nav-item .nav-label { font-size: 10px; font-weight: 500; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+    .pb-nav { padding-bottom: 80px; }
+
+    /* History */
+    .history-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--gray);
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-date { width: 44px; text-align: center; flex-shrink: 0; }
+    .history-date .h-day { font-size: 20px; font-weight: 700; color: var(--dark-blue); }
+    .history-date .h-mon { font-size: 10px; color: var(--subtext); }
+    .history-info  { flex: 1; }
+    .history-info .h-status { font-size: 13px; font-weight: 600; }
+    .history-info .h-times  { font-size: 11px; color: var(--subtext); margin-top: 2px; }
+    .history-earning { text-align: right; }
+    .history-earning .h-amt   { font-size: 14px; font-weight: 700; color: var(--green); }
+    .history-earning .h-hours { font-size: 11px; color: var(--subtext); }
+
+    /* Salary Card */
+    .salary-card {
+      border-radius: 16px; padding: 20px;
+      background: linear-gradient(135deg, var(--dark-blue), #2563eb);
+      color: var(--white); margin-bottom: 14px;
+    }
+    .salary-card .s-label  { font-size: 12px; opacity: 0.7; }
+    .salary-card .s-amount { font-size: 32px; font-weight: 700; margin: 4px 0; }
+    .salary-card .s-month  { font-size: 12px; opacity: 0.7; }
+    .salary-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .breakdown-item  { background: var(--gray); border-radius: 12px; padding: 12px; }
+    .breakdown-item .b-label { font-size: 11px; color: var(--subtext); }
+    .breakdown-item .b-value { font-size: 15px; font-weight: 700; margin-top: 4px; }
+
+    /* Alert banner */
+    .alert-banner {
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+      font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 8px;
+    }
+    .alert-warning { background: var(--light-yellow); color: var(--yellow); }
+    .alert-info    { background: var(--light-blue);   color: var(--mid-blue); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>🏢 <span id="companyName">ABC Company</span></h1>
+    <p>Attendance System</p>
+  </div>
+  <div class="header-time">
+    <div class="time-display" id="liveTime">--:--:--</div>
+    <div class="date-display" id="liveDate">Loading...</div>
+    <span class="time-source time-local" id="timeSourceBadge">Local Time</span>
+  </div>
+</div>
+
+<div class="content pb-nav">
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="page-home">
+
+    <!-- Time warning -->
+    <div class="alert-banner alert-warning" id="timeWarning" style="display:none">
+      ⚠️ Server time unavailable — using device time. Deploy on Vercel for accurate time.
+    </div>
+
+    <!-- Zone Banner -->
+    <div class="zone-banner zone-unknown" id="zoneBanner">
+      <div class="zone-icon">⏳</div>
+      <div class="zone-info">
+        <div class="zone-name" id="zoneName">Loading Time...</div>
+        <div class="zone-desc" id="zoneDesc">Fetching server time</div>
+      </div>
+    </div>
+
+    <!-- Employee Card -->
+    <div class="card">
+      <div class="card-title">Employee</div>
+      <div class="emp-card">
+        <div class="emp-avatar" id="empAvatar">?</div>
+        <div>
+          <div class="emp-name" id="empName">Loading...</div>
+          <div class="emp-id"   id="empId">EMP-000</div>
+          <div class="emp-dept" id="empDept">-</div>
+        </div>
+        <span class="emp-badge badge-absent" id="empBadge">Absent</span>
+      </div>
+    </div>
+
+    <!-- Status Pills -->
+    <div class="status-row">
+      <div class="status-pill pill-wait" id="pillLocation">
+        <div class="pill-icon">📍</div>
+        <div class="pill-text">
+          <span class="pill-label">Location</span>
+          <span class="pill-value" id="locationStatus">Checking...</span>
+        </div>
+      </div>
+      <div class="status-pill pill-wait" id="pillTime">
+        <div class="pill-icon">⏰</div>
+        <div class="pill-text">
+          <span class="pill-label">Time Source</span>
+          <span class="pill-value" id="timeStatus">Loading...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today Record -->
+    <div class="card">
+      <div class="card-title">Today's Record</div>
+      <div class="record-row">
+        <span class="record-label">Check-in</span>
+        <span class="record-value green" id="recCheckin">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">Check-out</span>
+        <span class="record-value orange" id="recCheckout">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">Working Hours</span>
+        <span class="record-value" id="recHours">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">OT Hours</span>
+        <span class="record-value orange" id="recOT">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">Today's Earnings</span>
+        <span class="record-value green" id="recEarning">—</span>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <button class="action-btn btn-disabled" id="actionBtn" onclick="startAction()">
+      <span id="actionBtnIcon">⏳</span>
+      <span id="actionBtnText">Initializing...</span>
+    </button>
+
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div class="page" id="page-history">
+    <div class="card">
+      <div class="card-title">This Month's Summary (June 2026)</div>
+      <div class="salary-card">
+        <div class="s-label">Net Salary (So Far)</div>
+        <div class="s-amount" id="salaryTotal">₹0</div>
+        <div class="s-month">June 2026</div>
+      </div>
+      <div class="salary-breakdown">
+        <div class="breakdown-item">
+          <div class="b-label">Present Days</div>
+          <div class="b-value" id="statPresent">0</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="b-label">Absent Days</div>
+          <div class="b-value" style="color:var(--red)" id="statAbsent">0</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="b-label">Total OT</div>
+          <div class="b-value" style="color:var(--orange)" id="statOT">0h 0m</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="b-label">Late Days</div>
+          <div class="b-value" style="color:var(--yellow)" id="statLate">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Attendance History</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- PROFILE PAGE -->
+  <div class="page" id="page-profile">
+    <div class="card">
+      <div class="card-title">My Profile</div>
+      <div class="emp-card" style="margin-bottom:16px">
+        <div class="emp-avatar" style="width:64px;height:64px;font-size:26px" id="profileAvatar">?</div>
+        <div>
+          <div class="emp-name" id="profileName">—</div>
+          <div class="emp-id"   id="profileId">EMP-000</div>
+          <div class="emp-dept" id="profileDept">—</div>
+        </div>
+      </div>
+      <div class="record-row">
+        <span class="record-label">Phone</span>
+        <span class="record-value" id="profilePhone">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">Basic Salary</span>
+        <span class="record-value green" id="profileSalary">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">OT Rate</span>
+        <span class="record-value orange" id="profileOT">—</span>
+      </div>
+      <div class="record-row">
+        <span class="record-label">Joining Date</span>
+        <span class="record-value" id="profileJoining">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Raise a Dispute</div>
+      <p style="font-size:13px;color:var(--subtext);margin-bottom:12px">
+        Attendance issue? Let your manager know.
+      </p>
+      <textarea id="disputeText" rows="3"
+        style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;
+               padding:10px;font-size:14px;resize:none;outline:none"
+        placeholder="Describe the issue here..."></textarea>
+      <button onclick="submitDispute()"
+        style="margin-top:10px;width:100%;background:var(--dark-blue);
+               color:#fff;border:none;border-radius:12px;padding:12px;
+               font-size:14px;font-weight:600;cursor:pointer">
+        📤 Send to Manager
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <button class="nav-item active" id="nav-home" onclick="showPage('home')">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-item" id="nav-history" onclick="showPage('history')">
+    <span class="nav-icon">📅</span>
+    <span class="nav-label">History</span>
+  </button>
+  <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">Profile</span>
+  </button>
+</div>
+
+<!-- SELFIE MODAL -->
+<div class="modal-overlay" id="selfieModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('selfieModal')">✕</button>
+    <div class="modal-title" id="selfieModalTitle">📸 Check-in Selfie</div>
+    <div class="modal-sub">Live photo only — gallery upload is disabled</div>
+    <div class="steps">
+      <div class="step done"  id="step1"></div>
+      <div class="step done"  id="step2"></div>
+      <div class="step active" id="step3"></div>
+    </div>
+    <div class="selfie-container" id="selfieContainer">
+      <video class="selfie-video" id="selfieVideo" autoplay playsinline muted></video>
+      <canvas class="selfie-canvas" id="selfieCanvas"></canvas>
+      <div class="selfie-overlay">
+        <div class="capture-btn" onclick="captureSelfie()">📸</div>
+      </div>
+    </div>
+    <div id="selfiePreviewDiv" style="display:none">
+      <img id="selfiePreviewImg" style="border-radius:14px;width:100%;margin-bottom:12px"/>
+      <div style="display:flex;gap:10px">
+        <button onclick="retakeSelfie()"
+          style="flex:1;padding:14px;border:2px solid var(--dark-gray);
+                 border-radius:12px;background:none;font-size:14px;
+                 font-weight:600;cursor:pointer">
+          🔄 Retake
+        </button>
+        <button onclick="confirmSelfie()"
+          style="flex:2;padding:14px;background:var(--green);color:#fff;
+                 border:none;border-radius:12px;font-size:14px;
+                 font-weight:600;cursor:pointer">
+          ✅ Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="success-screen" id="successContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════
+const CONFIG = {
+  companyName:       "ABC Company",
+  officeLatitude:     28.6139,    // ← Change to your office latitude
+  officeLongitude:    77.2090,    // ← Change to your office longitude
+  radiusMeters:       100,
+  // Time Rules (24hr)
+  earlyOT_end:       "09:30",
+  normal_end:        "10:05",
+  manager_zone_end:  "10:30",
+  cooling_start:     "17:50",
+  office_end:        "18:00",
+  cooling_end:       "18:10",
+};
+
+// ══════════════════════════════════════════════════════════════
+// DEMO EMPLOYEE (Module 2 mein DB se aayega)
+// ══════════════════════════════════════════════════════════════
+const EMPLOYEE = {
+  id:          "EMP-001",
+  naam:        "Rahul Kumar",
+  phone:       "+91 98765 43210",
+  department:  "Production",
+  designation: "Senior Worker",
+  joiningDate: "01 Jan 2023",
+  basicSalary: 15000,
+  otRate:      50,
+};
+
+const demoHistory = [
+  { date:"17",mon:"Jun",status:"present",checkin:"9:02 AM",checkout:"6:45 PM",hours:"9h 43m",ot:"35m",earning:529 },
+  { date:"16",mon:"Jun",status:"present",checkin:"8:45 AM",checkout:"6:15 PM",hours:"9h 30m",ot:"5m", earning:504 },
+  { date:"15",mon:"Jun",status:"absent", checkin:"—",      checkout:"—",      hours:"—",     ot:"—",  earning:0 },
+  { date:"14",mon:"Jun",status:"present",checkin:"9:28 AM",checkout:"6:10 PM",hours:"8h 42m",ot:"0m", earning:500 },
+  { date:"13",mon:"Jun",status:"present",checkin:"7:30 AM",checkout:"7:20 PM",hours:"11h 50m",ot:"3h 20m",earning:750},
+];
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let serverTime    = null;
+let isServerTime  = false;
+let locationOK    = false;
+let locationLat   = null;
+let locationLng   = null;
+let currentZone   = null;
+let stream        = null;
+let capturedPhoto = null;
+let isCheckedIn   = false;
+let todayRecord   = { checkin:null, checkout:null, earlyOT:0, lateOT:0, deduction:0, status:"absent" };
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+window.onload = () => {
+  document.getElementById("companyName").textContent = CONFIG.companyName;
+  loadEmployee();
+  loadHistory();
+  fetchServerTime();
+  startLocationWatch();
+  setInterval(tickTime, 1000);
+};
+
+// ══════════════════════════════════════════════════════════════
+// SERVER TIME — Multiple APIs with fallback
+// ══════════════════════════════════════════════════════════════
+async function fetchServerTime() {
+  const APIs = [
+    { url: "https://worldtimeapi.org/api/timezone/Asia/Kolkata",
+      parse: d => new Date(d.datetime) },
+    { url: "https://timeapi.io/api/Time/current/zone?timeZone=Asia%2FKolkata",
+      parse: d => new Date(`${d.date}T${d.time}`) },
+    { url: "https://worldclockapi.com/api/json/ist/now",
+      parse: d => new Date(d.currentDateTime) },
+  ];
+
+  for (const api of APIs) {
+    try {
+      const controller = new AbortController();
+      const timeout    = setTimeout(() => controller.abort(), 4000);
+      const res        = await fetch(api.url, { signal: controller.signal });
+      clearTimeout(timeout);
+      const data       = await res.json();
+      serverTime       = api.parse(data);
+      isServerTime     = true;
+
+      // Update UI
+      document.getElementById("pillTime").className      = "status-pill pill-ok";
+      document.getElementById("timeStatus").textContent  = "✓ Server";
+      document.getElementById("timeSourceBadge").className = "time-source time-server";
+      document.getElementById("timeSourceBadge").textContent = "Server Time";
+      document.getElementById("timeWarning").style.display = "none";
+      updateZone();
+      updateActionButton();
+      return; // Success — stop trying
+    } catch(e) {
+      // Try next API
+      continue;
+    }
+  }
+
+  // All APIs failed — use local time
+  serverTime   = new Date();
+  isServerTime = false;
+  document.getElementById("pillTime").className       = "status-pill pill-info";
+  document.getElementById("timeStatus").textContent   = "⚠ Device Time";
+  document.getElementById("timeSourceBadge").className = "time-source time-local";
+  document.getElementById("timeSourceBadge").textContent = "Device Time";
+  document.getElementById("timeWarning").style.display = "flex";
+  updateZone();
+  updateActionButton();
+
+  // Retry every 30 seconds
+  setTimeout(fetchServerTime, 30000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// TICK CLOCK
+// ══════════════════════════════════════════════════════════════
+function tickTime() {
+  if (!serverTime) return;
+  serverTime = new Date(serverTime.getTime() + 1000);
+  // If using device time, re-sync occasionally
+  if (!isServerTime) serverTime = new Date();
+
+  const h = String(serverTime.getHours()).padStart(2,"0");
+  const m = String(serverTime.getMinutes()).padStart(2,"0");
+  const s = String(serverTime.getSeconds()).padStart(2,"0");
+  document.getElementById("liveTime").textContent = `${h}:${m}:${s}`;
+
+  const days   = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  document.getElementById("liveDate").textContent =
+    `${days[serverTime.getDay()]}, ${serverTime.getDate()} ${months[serverTime.getMonth()]} ${serverTime.getFullYear()}`;
+
+  updateZone();
+  updateActionButton();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ZONE LOGIC
+// ══════════════════════════════════════════════════════════════
+function toMins(t) { const [h,m]=t.split(":").map(Number); return h*60+m; }
+function nowMins()  { if(!serverTime) return 0; return serverTime.getHours()*60+serverTime.getMinutes(); }
+
+function getZone() {
+  if (!serverTime) return "unknown";
+  const now    = nowMins();
+  const earlyE = toMins(CONFIG.earlyOT_end);
+  const normE  = toMins(CONFIG.normal_end);
+  const mgrE   = toMins(CONFIG.manager_zone_end);
+  const coolS  = toMins(CONFIG.cooling_start);
+  const coolE  = toMins(CONFIG.cooling_end);
+
+  if (!isCheckedIn) {
+    if (now < earlyE) return "early_ot";
+    if (now < normE)  return "normal";
+    if (now < mgrE)   return "manager";
+    return "late";
+  } else {
+    if (now < coolS)  return "early_exit";
+    if (now <= coolE) return "cooling";
+    return "late_ot";
+  }
+}
+
+const ZONES = {
+  early_ot:  { cls:"zone-early-ot", icon:"🌅", name:"Early OT Zone",    desc:"Before 9:30 AM — OT from arrival until 10:00 AM 💰" },
+  normal:    { cls:"zone-normal",   icon:"✅", name:"Normal Check-in",  desc:"On time — check in now" },
+  manager:   { cls:"zone-manager",  icon:"⚠️", name:"Manager Zone",     desc:"10:05–10:30 AM — manager will decide" },
+  late:      { cls:"zone-late",     icon:"❌", name:"Late — Auto Deduct",desc:"Deduction from 10:00 AM will apply" },
+  early_exit:{ cls:"zone-normal",   icon:"🕐", name:"Office Hours",     desc:"Before 5:50 PM — early exit causes deduction" },
+  cooling:   { cls:"zone-cooling",  icon:"😌", name:"Cooling Period",   desc:"5:50–6:10 PM — no deduction, no OT. Free to leave!" },
+  late_ot:   { cls:"zone-late-ot",  icon:"💰", name:"OT Zone",         desc:"OT counting from 6:00 PM — keep earning! 💰" },
+  unknown:   { cls:"zone-unknown",  icon:"⏳", name:"Loading...",       desc:"Fetching server time" },
+};
+
+function updateZone() {
+  const z    = getZone();
+  currentZone= z;
+  const info = ZONES[z] || ZONES.unknown;
+  const b    = document.getElementById("zoneBanner");
+  b.className = `zone-banner ${info.cls}`;
+  document.getElementById("zoneName").textContent = info.name;
+  document.getElementById("zoneDesc").textContent = info.desc;
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOCATION
+// ══════════════════════════════════════════════════════════════
+function startLocationWatch() {
+  if (!navigator.geolocation) {
+    setPill("pillLocation","pill-err","locationStatus","Not supported");
+    return;
+  }
+  navigator.geolocation.watchPosition(
+    pos => {
+      locationLat = pos.coords.latitude;
+      locationLng = pos.coords.longitude;
+      const dist  = getDistance(locationLat, locationLng, CONFIG.officeLatitude, CONFIG.officeLongitude);
+      locationOK  = dist <= CONFIG.radiusMeters;
+      const cls   = locationOK ? "pill-ok" : "pill-err";
+      const txt   = locationOK ? `✓ ${Math.round(dist)}m` : `✗ ${Math.round(dist)}m`;
+      setPill("pillLocation", cls, "locationStatus", txt);
+      updateActionButton();
+    },
+    () => setPill("pillLocation","pill-err","locationStatus","Allow GPS"),
+    { enableHighAccuracy:true, maximumAge:10000 }
+  );
+}
+
+function setPill(pillId, cls, valId, val) {
+  document.getElementById(pillId).className = `status-pill ${cls}`;
+  document.getElementById(valId).textContent = val;
+}
+
+function getDistance(lat1,lng1,lat2,lng2) {
+  const R=6371000, dL=(lat2-lat1)*Math.PI/180, dl=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dl/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ══════════════════════════════════════════════════════════════
+// ACTION BUTTON
+// ══════════════════════════════════════════════════════════════
+function updateActionButton() {
+  const btn  = document.getElementById("actionBtn");
+  const icon = document.getElementById("actionBtnIcon");
+  const text = document.getElementById("actionBtnText");
+  const badge= document.getElementById("empBadge");
+
+  if (!serverTime) {
+    btn.className = "action-btn btn-disabled";
+    icon.textContent="⏳"; text.textContent="Initializing..."; return;
+  }
+  if (!isCheckedIn) {
+    badge.className="emp-badge badge-absent"; badge.textContent="Absent";
+    if (todayRecord.checkout) {
+      btn.className="action-btn btn-disabled";
+      icon.textContent="✅"; text.textContent="Day Complete!"; return;
+    }
+    if (!locationOK) {
+      btn.className="action-btn btn-disabled";
+      icon.textContent="📍"; text.textContent="Go Inside Office First"; return;
+    }
+    btn.className="action-btn btn-checkin"; icon.textContent="✅";
+    const msgs = { early_ot:"Check In (Early OT Eligible 💰)", manager:"Check In (Needs Manager Approval)", late:"Check In (Deduction Will Apply!)", normal:"Check In" };
+    text.textContent = msgs[currentZone] || "Check In";
+  } else {
+    badge.className="emp-badge badge-present"; badge.textContent="Present";
+    if (!locationOK) {
+      btn.className="action-btn btn-disabled";
+      icon.textContent="📍"; text.textContent="Stay Inside Office"; return;
+    }
+    btn.className="action-btn btn-checkout"; icon.textContent="🚪";
+    const msgs = { cooling:"Check Out (Cooling Period ✅)", late_ot:"Check Out (OT Running 💰)", early_exit:"Check Out (Deduction Will Apply!)" };
+    text.textContent = msgs[currentZone] || "Check Out";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ACTION FLOW
+// ══════════════════════════════════════════════════════════════
+function startAction() {
+  if (!serverTime) { showToast("Time not loaded yet","error"); return; }
+  if (!locationOK) { showToast("📍 Go inside office first!","error"); return; }
+  if (!isCheckedIn && todayRecord.checkout) { showToast("Day already complete!","error"); return; }
+  document.getElementById("selfieModalTitle").textContent = isCheckedIn ? "📸 Check-out Selfie" : "📸 Check-in Selfie";
+  openModal("selfieModal");
+  startCamera();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CAMERA
+// ══════════════════════════════════════════════════════════════
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"user",width:1280,height:720}, audio:false });
+    document.getElementById("selfieVideo").srcObject = stream;
+    document.getElementById("selfieContainer").style.display = "block";
+    document.getElementById("selfiePreviewDiv").style.display = "none";
+  } catch(e) {
+    showToast("Allow camera access!","error");
+    closeModal("selfieModal");
+  }
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
+}
+
+function captureSelfie() {
+  const video=document.getElementById("selfieVideo");
+  const canvas=document.getElementById("selfieCanvas");
+  canvas.width=video.videoWidth||1280; canvas.height=video.videoHeight||720;
+  const ctx=canvas.getContext("2d");
+  ctx.scale(-1,1); ctx.drawImage(video,-canvas.width,0,canvas.width,canvas.height); ctx.scale(-1,1);
+  capturedPhoto=canvas.toDataURL("image/jpeg",0.7);
+  document.getElementById("selfiePreviewImg").src=capturedPhoto;
+  document.getElementById("selfieContainer").style.display="none";
+  document.getElementById("selfiePreviewDiv").style.display="block";
+  stopCamera();
+}
+
+function retakeSelfie() {
+  capturedPhoto=null;
+  document.getElementById("selfieContainer").style.display="block";
+  document.getElementById("selfiePreviewDiv").style.display="none";
+  startCamera();
+}
+
+function confirmSelfie() {
+  closeModal("selfieModal"); stopCamera();
+  isCheckedIn ? processCheckout() : processCheckin();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHECK-IN
+// ══════════════════════════════════════════════════════════════
+function processCheckin() {
+  const now=serverTime, t=formatTime(now), z=currentZone;
+  let earlyOT=0, deduct=0;
+  if (z==="early_ot") {
+    earlyOT = Math.max(0, 10*60 - (now.getHours()*60+now.getMinutes()));
+  }
+  if (z==="late") {
+    deduct = Math.max(0, (now.getHours()*60+now.getMinutes()) - 10*60);
+  }
+  todayRecord = { ...todayRecord, checkin:t, earlyOT, deduction:deduct, status:"present", checkinZone:z };
+  isCheckedIn=true;
+  updateTodayCard(); updateActionButton();
+
+  const detail = z==="early_ot"
+    ? `✅ Checked in at ${t}\n💰 Early OT: ${fmtMins(earlyOT)} (until 10:00 AM)`
+    : z==="manager"
+    ? `✅ Checked in at ${t}\n⚠️ Awaiting manager approval`
+    : z==="late"
+    ? `✅ Checked in at ${t}\n❌ Deduction: ${fmtMins(deduct)} (from 10:00 AM)`
+    : `✅ Checked in at ${t}\n🟢 On time!`;
+
+  showSuccessModal("✅","Check-in Successful!",t,detail);
+  showToast("✅ Checked in!","success");
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHECK-OUT
+// ══════════════════════════════════════════════════════════════
+function processCheckout() {
+  const now=serverTime, t=formatTime(now), z=currentZone;
+  const isSunday=now.getDay()===0, multi=isSunday?2:1;
+  const outMins=now.getHours()*60+now.getMinutes();
+  const inParsed=parseTime(todayRecord.checkin);
+  const inMins=inParsed.h*60+inParsed.m;
+  const workMins=outMins-inMins;
+
+  let lateOT=0, exitDeduct=0;
+  if (z==="late_ot") lateOT=Math.max(0,outMins-toMins(CONFIG.cooling_end));
+  if (z==="early_exit") exitDeduct=Math.max(0,toMins(CONFIG.office_end)-outMins);
+
+  const dailyRate =(EMPLOYEE.basicSalary/26);
+  const earlyAmt  =(todayRecord.earlyOT/60)*EMPLOYEE.otRate*multi;
+  const lateAmt   =(lateOT/60)*EMPLOYEE.otRate*multi;
+  const deductAmt =((todayRecord.deduction+exitDeduct)/60)*(EMPLOYEE.basicSalary/26/8);
+  const total     =dailyRate+earlyAmt+lateAmt-deductAmt;
+
+  todayRecord={...todayRecord,checkout:t,lateOT,exitDeduct,workMins,earning:Math.round(total)};
+  isCheckedIn=false;
+  updateTodayCard(); updateActionButton();
+
+  const totalOT=todayRecord.earlyOT+lateOT;
+  const detail=
+    `⏱ Working: ${fmtMins(workMins)}\n`+
+    `🕐 OT: ${fmtMins(totalOT)}\n`+
+    `💰 Today's Earnings: ₹${Math.round(total)}`+
+    (isSunday?"\n🌟 Sunday — 2X OT Rate!":"");
+
+  showSuccessModal("🚪","Checked Out!",t,detail);
+  showToast("🚪 Checked out!","success");
+}
+
+// ══════════════════════════════════════════════════════════════
+// UI UPDATES
+// ══════════════════════════════════════════════════════════════
+function loadEmployee() {
+  const ini=EMPLOYEE.naam.split(" ").map(w=>w[0]).join("").substring(0,2);
+  ["empAvatar","profileAvatar"].forEach(id=>document.getElementById(id).textContent=ini);
+  document.getElementById("empName").textContent      = EMPLOYEE.naam;
+  document.getElementById("empId").textContent        = EMPLOYEE.id;
+  document.getElementById("empDept").textContent      = `${EMPLOYEE.department} • ${EMPLOYEE.designation}`;
+  document.getElementById("profileName").textContent  = EMPLOYEE.naam;
+  document.getElementById("profileId").textContent    = EMPLOYEE.id;
+  document.getElementById("profileDept").textContent  = EMPLOYEE.department;
+  document.getElementById("profilePhone").textContent = EMPLOYEE.phone;
+  document.getElementById("profileSalary").textContent= `₹${EMPLOYEE.basicSalary.toLocaleString()}/month`;
+  document.getElementById("profileOT").textContent    = `₹${EMPLOYEE.otRate}/hour`;
+  document.getElementById("profileJoining").textContent= EMPLOYEE.joiningDate;
+}
+
+function updateTodayCard() {
+  document.getElementById("recCheckin").textContent   = todayRecord.checkin  || "—";
+  document.getElementById("recCheckout").textContent  = todayRecord.checkout || "—";
+  document.getElementById("recHours").textContent     = todayRecord.workMins ? fmtMins(todayRecord.workMins) : "—";
+  const tot=(todayRecord.earlyOT||0)+(todayRecord.lateOT||0);
+  document.getElementById("recOT").textContent        = tot>0 ? fmtMins(tot) : "—";
+  document.getElementById("recEarning").textContent   = todayRecord.earning ? `₹${todayRecord.earning}` : "—";
+}
+
+function loadHistory() {
+  let html="", total=0, present=0, absent=0, late=0;
+  demoHistory.forEach(r=>{
+    const ok=r.status==="present";
+    if(ok){present++;total+=r.earning;}else{absent++;}
+    html+=`<div class="history-item">
+      <div class="history-date"><div class="h-day">${r.date}</div><div class="h-mon">${r.mon}</div></div>
+      <div class="history-info">
+        <div class="h-status" style="color:${ok?"var(--green)":"var(--red)"}">${ok?"✅ Present":"❌ Absent"}</div>
+        <div class="h-times">${r.checkin} – ${r.checkout}</div>
+      </div>
+      <div class="history-earning">
+        <div class="h-amt">${ok?"₹"+r.earning:"—"}</div>
+        <div class="h-hours">${r.hours}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById("historyList").innerHTML=html;
+  document.getElementById("salaryTotal").textContent ="₹"+total.toLocaleString();
+  document.getElementById("statPresent").textContent =present;
+  document.getElementById("statAbsent").textContent  =absent;
+  document.getElementById("statOT").textContent      ="8h 30m";
+  document.getElementById("statLate").textContent    ="1";
+}
+
+function showSuccessModal(icon,title,time,detail) {
+  document.getElementById("successContent").innerHTML=`
+    <div class="success-icon">${icon}</div>
+    <div class="success-title">${title}</div>
+    <div class="success-sub">Time: ${time}${isServerTime?" (Server)":" (Device)"}</div>
+    <div class="success-detail">
+      <pre style="white-space:pre-wrap;font-size:13px;font-family:inherit;line-height:1.8">${detail}</pre>
+    </div>
+    <button onclick="closeModal('successModal')"
+      style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);
+             color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">
+      OK ✓
+    </button>`;
+  openModal("successModal");
+}
+
+function submitDispute() {
+  const t=document.getElementById("disputeText").value.trim();
+  if(!t){showToast("Please describe the issue first","error");return;}
+  showToast("✅ Sent to manager!","success");
+  document.getElementById("disputeText").value="";
+}
+
+function showPage(p) {
+  document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(el=>el.classList.remove("active"));
+  document.getElementById("page-"+p).classList.add("active");
+  document.getElementById("nav-"+p).classList.add("active");
+}
+
+function openModal(id)  { document.getElementById(id).classList.add("show"); }
+function closeModal(id) { document.getElementById(id).classList.remove("show"); if(id==="selfieModal") stopCamera(); }
+
+function showToast(msg,type="") {
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.className="toast "+type; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3000);
+}
+
+function formatTime(d) {
+  let h=d.getHours(),m=d.getMinutes();
+  const ap=h>=12?"PM":"AM"; h=h%12||12;
+  return `${h}:${String(m).padStart(2,"0")} ${ap}`;
+}
+function parseTime(s) {
+  const [t,ap]=s.split(" "); let [h,m]=t.split(":").map(Number);
+  if(ap==="PM"&&h!==12) h+=12; if(ap==="AM"&&h===12) h=0;
+  return {h,m};
+}
+function fmtMins(m) {
+  const h=Math.floor(m/60),mn=m%60;
+  return h>0?`${h}h ${mn}m`:`${mn}m`;
+}
+
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
