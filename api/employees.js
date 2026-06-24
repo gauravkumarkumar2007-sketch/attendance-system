@@ -3,7 +3,7 @@ const https = require("https");
 
 function dbQuery(sql, params = []) {
   return new Promise((resolve, reject) => {
-    const url   = process.env.TURSO_DATABASE_URL.replace("libsql://","https://") + "/v2/pipeline";
+    const url   = (process.env.TURSO_DATABASE_URL||"").trim().replace("libsql://","https://") + "/v2/pipeline";
     const token = process.env.TURSO_AUTH_TOKEN;
     const args  = params.map(p => {
       if (p === null || p === undefined) return { type: "null" };
