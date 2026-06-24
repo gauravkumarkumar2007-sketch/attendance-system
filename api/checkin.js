@@ -12,7 +12,7 @@ function dbQuery(sql, params = []) {
     if (!token)   return reject(new Error("TURSO_AUTH_TOKEN not set in Vercel"));
 
     // Build URL
-    const httpUrl = rawUrl.replace("libsql://", "https://") + "/v2/pipeline";
+    const httpUrl = rawUrl.trim().replace("libsql://", "https://") + "/v2/pipeline";
 
     let urlObj;
     try { urlObj = new URL(httpUrl); }
