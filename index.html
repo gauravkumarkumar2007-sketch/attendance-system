@@ -291,6 +291,7 @@ const CONFIG = {
 };
 
 const EMP = { basicSalary:15000, otRate:50 };
+const EMPLOYEE = { telegramId: "123456789" }; // Change to real Telegram ID
 const demoHistory = [
   {date:"17",mon:"Jun",status:"present",checkin:"9:02 AM",checkout:"6:45 PM",hours:"9h 43m",earning:529},
   {date:"16",mon:"Jun",status:"present",checkin:"8:45 AM",checkout:"6:15 PM",hours:"9h 30m",earning:504},
@@ -318,69 +319,31 @@ window.onload=()=>{
 
 // ── FETCH IST TIME ──────────────────────────────────────────
 async function fetchIST(){
-  const apis=[
-    { url:"https://worldtimeapi.org/api/timezone/Asia/Kolkata",
-      get: d=>{
-        const dt=new Date(d.datetime);
-        if(isNaN(dt.getTime())) return null;
-        // worldtimeapi returns local IST time in datetime string
-        // Parse the offset time directly
-        const str=d.datetime; // "2026-06-21T21:10:00.123456+05:30"
-        const parts=str.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-        if(!parts) return null;
-        return {
-          h:parseInt(parts[4]),m:parseInt(parts[5]),s:parseInt(parts[6]),
-          day:new Date(d.datetime).getDay(),
-          dt:parseInt(parts[3]),mon:parseInt(parts[2])-1,yr:parseInt(parts[1]),
-          utc:dt.getTime()
-        };
-      }
-    },
-    { url:"https://timeapi.io/api/Time/current/zone?timeZone=Asia%2FKolkata",
-      get: d=>{
-        // returns: {year,month,day,hour,minute,seconds,dayOfWeek}
-        if(!d.hour && d.hour!==0) return null;
-        const days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-        const dayNum=days.indexOf(d.dayOfWeek);
-        return {
-          h:d.hour,m:d.minute,s:d.seconds,
-          day:dayNum>=0?dayNum:new Date().getDay(),
-          dt:d.day,mon:d.month-1,yr:d.year,
-          utc:Date.now()
-        };
-      }
-    },
-  ];
+  try{
+    // Use our own Vercel API — no CORS issues!
+    const ctrl=new AbortController();
+    const to=setTimeout(()=>ctrl.abort(),5000);
+    const res=await fetch("/api/time",{signal:ctrl.signal});
+    clearTimeout(to);
+    if(!res.ok) throw new Error("API error");
+    const d=await res.json();
+    if(typeof d.ist_hours==="undefined") throw new Error("Bad response");
 
-  for(const api of apis){
-    try{
-      const ctrl=new AbortController();
-      const to=setTimeout(()=>ctrl.abort(),5000);
-      const res=await fetch(api.url,{signal:ctrl.signal});
-      clearTimeout(to);
-      if(!res.ok) continue;
-      const data=await res.json();
-      const r=api.get(data);
-      if(!r) continue;
+    istH=d.ist_hours; istM=d.ist_minutes; istS=d.ist_seconds;
+    istDay=d.ist_day; istDt=d.ist_date; istMon=d.ist_month; istYr=d.ist_year;
+    serverUTC=d.utc_timestamp; receivedAt=Date.now();
+    isServer=true;
 
-      // Got IST time!
-      istH=r.h; istM=r.m; istS=r.s;
-      istDay=r.day; istDt=r.dt; istMon=r.mon; istYr=r.yr;
-      serverUTC=r.utc; receivedAt=Date.now();
-      isServer=true;
-
-      document.getElementById("pillTime").className="status-pill pill-ok";
-      document.getElementById("timeStatus").textContent="✓ Server";
-      document.getElementById("timeBadge").className="time-badge badge-server";
-      document.getElementById("timeBadge").textContent="Server Time";
-      updateZone(); updateBtn();
-      return;
-    }catch(e){ continue; }
+    document.getElementById("pillTime").className="status-pill pill-ok";
+    document.getElementById("timeStatus").textContent="✓ Server";
+    document.getElementById("timeBadge").className="time-badge badge-server";
+    document.getElementById("timeBadge").textContent="Server Time";
+    updateZone(); updateBtn();
+  }catch(e){
+    // Fallback to device time
+    useDeviceTime();
+    setTimeout(fetchIST,30000);
   }
-
-  // Fallback — device time converted to IST
-  useDeviceTime();
-  setTimeout(fetchIST,30000);
 }
 
 function useDeviceTime(){
@@ -566,43 +529,75 @@ function retakeSelfie(){
 function confirmSelfie(){closeModal("selfieModal");stopCam();checkedIn?doCheckout():doCheckin()}
 
 // ── CHECKIN ─────────────────────────────────────────────────
-function doCheckin(){
-  const t=fmtTime(), z=currentZone;
-  let earlyOT=0,deduct=0;
-  if(z==="early_ot") earlyOT=Math.max(0,600-nowMins()); // 10:00=600 mins
-  if(z==="late")     deduct =Math.max(0,nowMins()-600);
-  todayRec={...todayRec,checkin:t,earlyOT,deduct,status:"present"};
-  checkedIn=true; updateCard(); updateBtn();
-  const detail=z==="early_ot"?`✅ Checked in at ${t}\n💰 Early OT: ${fmtMins(earlyOT)} (until 10:00 AM)`:
-    z==="manager"?`✅ Checked in at ${t}\n⚠️ Pending manager approval`:
-    z==="late"?`✅ Checked in at ${t}\n❌ Deduction: ${fmtMins(deduct)}`:
-    `✅ Checked in at ${t}\n🟢 On time!`;
-  showSuccess("✅","Check-in Successful!",t,detail);
-  showToast("✅ Checked in!","success");
+async function doCheckin(){
+  const btn=document.getElementById("actionBtn");
+  btn.className="action-btn btn-disabled";
+  document.getElementById("actionBtnText").textContent="Saving...";
+  try{
+    const res=await fetch("/api/checkin",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        telegram_user_id: EMPLOYEE.telegramId || "demo_user",
+        location_lat: locLat,
+        location_lng: locLng,
+        selfie_base64: photo||""
+      })
+    });
+    const data=await res.json();
+    if(!data.success) throw new Error(data.error||"Check-in failed");
+
+    todayRec={...todayRec,checkin:data.time,earlyOT:Math.round((data.early_ot||0)*60),deduct:Math.round((data.deduction||0)*60),status:"present"};
+    checkedIn=true; updateCard(); updateBtn();
+
+    const detail=data.zone==="early_ot"?`✅ Checked in at ${data.time}\n💰 Early OT: ${fmtMins(Math.round((data.early_ot||0)*60))} (until 10:00 AM)`:
+      data.zone==="manager_zone"?`✅ Checked in at ${data.time}\n⚠️ Pending manager approval`:
+      data.zone==="late_deduct"?`✅ Checked in at ${data.time}\n❌ Deduction: ${fmtMins(Math.round((data.deduction||0)*60))}`:
+      `✅ Checked in at ${data.time}\n🟢 On time!`;
+    showSuccess("✅","Check-in Successful!",data.time,detail);
+    showToast("✅ Checked in!","success");
+  }catch(e){
+    showToast("❌ "+e.message,"error");
+    updateBtn();
+  }
 }
 
 // ── CHECKOUT ────────────────────────────────────────────────
-function doCheckout(){
-  const t=fmtTime(), z=currentZone;
-  const isSun=istDay===0, multi=isSun?2:1;
-  const outM=nowMins();
-  const inParsed=parseTime(todayRec.checkin);
-  const inM=inParsed.h*60+inParsed.m;
-  const workMins=outM-inM;
-  let lateOT=0,exitDeduct=0;
-  if(z==="late_ot")   lateOT    =Math.max(0,outM-toMins(CONFIG.cooling_end));
-  if(z==="early_exit")exitDeduct=Math.max(0,toMins(CONFIG.office_end)-outM);
-  const daily=(EMP.basicSalary/26);
-  const earlyAmt=(todayRec.earlyOT/60)*EMP.otRate*multi;
-  const lateAmt =(lateOT/60)*EMP.otRate*multi;
-  const deductAmt=((todayRec.deduct+exitDeduct)/60)*(EMP.basicSalary/26/8);
-  const total=Math.round(daily+earlyAmt+lateAmt-deductAmt);
-  todayRec={...todayRec,checkout:t,lateOT,workMins,earning:total};
-  checkedIn=false; updateCard(); updateBtn();
-  const totalOT=todayRec.earlyOT+lateOT;
-  const detail=`⏱ Working: ${fmtMins(workMins)}\n🕐 OT: ${fmtMins(totalOT)}\n💰 Today's Earnings: ₹${total}`+(isSun?"\n🌟 Sunday — 2X OT Rate!":"");
-  showSuccess("🚪","Checked Out!",t,detail);
-  showToast("🚪 Checked out!","success");
+async function doCheckout(){
+  const btn=document.getElementById("actionBtn");
+  btn.className="action-btn btn-disabled";
+  document.getElementById("actionBtnText").textContent="Saving...";
+  try{
+    const res=await fetch("/api/checkout",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        telegram_user_id: EMPLOYEE.telegramId || "demo_user",
+        selfie_base64: photo||""
+      })
+    });
+    const data=await res.json();
+    if(!data.success) throw new Error(data.error||"Check-out failed");
+
+    const workMins=Math.round((data.working_hours||0)*60);
+    const totalOTMins=Math.round(((data.early_ot_hours||0)+(data.late_ot_hours||0))*60);
+    const ms=data.month_summary||{};
+
+    todayRec={...todayRec,checkout:data.checkout_time,workMins,earning:data.today_earning};
+    checkedIn=false; updateCard(); updateBtn();
+
+    const detail=
+      `⏱ Working: ${fmtMins(workMins)}\n`+
+      `🕐 OT: ${fmtMins(totalOTMins)}\n`+
+      `💰 Today\'s Earnings: ₹${data.today_earning}`+
+      (data.ot_multiplier>1?"\n🌟 Holiday/Sunday — 2X OT!":"");
+
+    showSuccess("🚪","Checked Out!",data.checkout_time,detail,ms);
+    showToast("🚪 Checked out!","success");
+  }catch(e){
+    showToast("❌ "+e.message,"error");
+    updateBtn();
+  }
 }
 
 // ── UI UPDATES ───────────────────────────────────────────────
@@ -634,12 +629,22 @@ function loadHistory(){
   document.getElementById("statLate").textContent="1";
 }
 
-function showSuccess(icon,title,time,detail){
+function showSuccess(icon,title,time,detail,ms){
+  let monthHtml="";
+  if(ms){
+    monthHtml=`
+    <div style="background:var(--light-blue);border-radius:10px;padding:12px;margin-top:10px;font-size:12px;color:var(--dark-blue)">
+      <b>📊 This Month:</b><br>
+      Present: ${ms.present} days | Absent: ${ms.absent} days | Late: ${ms.late}<br>
+      OT: ${ms.total_ot}h | Net Salary: <b>₹${ms.net_salary}</b>
+    </div>`;
+  }
   document.getElementById("successContent").innerHTML=`
     <div class="success-icon">${icon}</div>
     <div class="success-title">${title}</div>
     <div class="success-sub">IST Time: ${time}${isServer?" (Server)":" (Device)"}</div>
     <div class="success-detail"><pre style="white-space:pre-wrap;font-size:13px;font-family:inherit;line-height:1.8">${detail}</pre></div>
+    ${monthHtml}
     <button onclick="closeModal('successModal')" style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">OK ✓</button>`;
   openModal("successModal");
 }
