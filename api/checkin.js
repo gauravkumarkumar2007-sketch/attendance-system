@@ -18,8 +18,8 @@ function dbQuery(sql, params = []) {
     const args = params.map(p => {
       if (p === null || p === undefined) return { type: "null" };
       if (typeof p === "number") {
-        if (Number.isInteger(p)) return { type: "integer", value: String(p) };
-        return { type: "real", value: String(p) };
+        if (Number.isInteger(p)) return { type: "integer", value: p };
+        return { type: "float", value: p };
       }
       return { type: "text", value: String(p) };
     });
