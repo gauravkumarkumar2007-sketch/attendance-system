@@ -7,7 +7,10 @@ function dbQuery(sql, params = []) {
     const token = process.env.TURSO_AUTH_TOKEN;
     const args  = params.map(p => {
       if (p === null || p === undefined) return { type: "null" };
-      if (typeof p === "number") return { type: "float", value: String(p) };
+      if (typeof p === "number") {
+        if (Number.isInteger(p)) return { type: "integer", value: String(p) };
+        return { type: "real", value: String(p) };
+      }
       return { type: "text", value: String(p) };
     });
     const body = JSON.stringify({ requests: [{ type:"execute", stmt:{ sql, args }}, { type:"close" }]});
