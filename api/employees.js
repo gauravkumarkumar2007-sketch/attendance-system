@@ -5,11 +5,11 @@ function dbQuery(sql, params = []) {
   return new Promise((resolve, reject) => {
     const url   = (process.env.TURSO_DATABASE_URL||"").trim().replace("libsql://","https://") + "/v2/pipeline";
     const token = process.env.TURSO_AUTH_TOKEN;
-    const args  = params.map(p => {
+    const args = params.map(p => {
       if (p === null || p === undefined) return { type: "null" };
       if (typeof p === "number") {
-        if (Number.isInteger(p)) return { type: "integer", value: String(p) };
-        return { type: "real", value: String(p) };
+        if (Number.isInteger(p)) return { type: "integer", value: p };
+        return { type: "float", value: p };
       }
       return { type: "text", value: String(p) };
     });
