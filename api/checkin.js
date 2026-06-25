@@ -1,31 +1,28 @@
-// api/checkin.js — Check-in with robust error handling
+// api/checkin.js
 const https = require("https");
 
 function dbQuery(sql, params = []) {
   return new Promise((resolve, reject) => {
+    const rawUrl = process.env.TURSO_DATABASE_URL;
+    const token  = process.env.TURSO_AUTH_TOKEN;
+    if (!rawUrl) return reject(new Error("TURSO_DATABASE_URL not set"));
+    if (!token)  return reject(new Error("TURSO_AUTH_TOKEN not set"));
 
-    // Check env vars
-    const rawUrl  = process.env.TURSO_DATABASE_URL;
-    const token   = process.env.TURSO_AUTH_TOKEN;
-
-    if (!rawUrl)  return reject(new Error("TURSO_DATABASE_URL not set in Vercel"));
-    if (!token)   return reject(new Error("TURSO_AUTH_TOKEN not set in Vercel"));
-
-    // Build URL
     const httpUrl = rawUrl.trim().replace("libsql://", "https://") + "/v2/pipeline";
 
     let urlObj;
     try { urlObj = new URL(httpUrl); }
-    catch(e) { return reject(new Error(`Bad DB URL: ${httpUrl}`)); }
+    catch(e) { return reject(new Error("Bad DB URL: " + httpUrl)); }
 
+    // Build args — only include if we have params
     const args = params.map(p => {
       if (p === null || p === undefined) return { type: "null" };
-      if (typeof p === "number")         return { type: "float",   value: String(p) };
-      return                                    { type: "text",    value: String(p) };
+      if (typeof p === "number")         return { type: "float", value: String(p) };
+      return { type: "text", value: String(p) };
     });
 
-    const stmt = { type: "execute", stmt: { sql, args } };
-    const body = JSON.stringify({ requests: [stmt, { type: "close" }] });
+    const stmt  = { type: "execute", stmt: args.length ? { sql, args } : { sql } };
+    const reqBody = JSON.stringify({ requests: [stmt, { type: "close" }] });
 
     const options = {
       hostname: urlObj.hostname,
@@ -34,30 +31,43 @@ function dbQuery(sql, params = []) {
       headers:  {
         "Authorization": `Bearer ${token}`,
         "Content-Type":  "application/json",
-        "Content-Length": Buffer.byteLength(body),
+        "Content-Length": Buffer.byteLength(reqBody),
       },
     };
 
     const req = https.request(options, (r) => {
-      let data = "";
-      r.on("data", d => data += d);
+      let raw = "";
+      r.on("data", d => raw += d);
       r.on("end", () => {
         try {
-          const result = JSON.parse(data);
-          const resp   = result.results[0];
-          if (resp.type === "error") return reject(new Error(resp.error.message));
-          const { cols, rows } = resp.response.result;
+          const parsed = JSON.parse(raw);
+
+          // Handle Turso error response
+          if (parsed.error) return reject(new Error("Turso: " + parsed.error));
+          if (!parsed.results) return reject(new Error("Turso bad response: " + raw.substring(0, 200)));
+
+          const resp = parsed.results[0];
+          if (!resp) return reject(new Error("No result in response"));
+          if (resp.type === "error") return reject(new Error(resp.error?.message || "DB error"));
+
+          const result = resp.response?.result;
+          if (!result) return resolve([]); // INSERT/UPDATE returns no rows
+
+          const cols = result.cols || [];
+          const rows = result.rows || [];
           resolve(rows.map(row =>
             Object.fromEntries(cols.map((c, i) => [
               c.name,
-              row[i].type === "null" ? null : row[i].value
+              row[i]?.type === "null" ? null : row[i]?.value
             ]))
           ));
-        } catch(e) { reject(new Error("DB parse error: " + e.message)); }
+        } catch(e) {
+          reject(new Error("Parse error: " + e.message + " | Raw: " + raw.substring(0, 100)));
+        }
       });
     });
-    req.on("error", e => reject(new Error("DB connect error: " + e.message)));
-    req.write(body);
+    req.on("error", e => reject(new Error("Network error: " + e.message)));
+    req.write(reqBody);
     req.end();
   });
 }
@@ -68,23 +78,18 @@ function getIST() {
   const ap = h >= 12 ? "PM" : "AM", h12 = h % 12 || 12;
   return {
     today:   ist.toISOString().split("T")[0],
-    h, m,
-    day:     ist.getUTCDay(),
+    h, m, day: ist.getUTCDay(),
     nowMins: h * 60 + m,
-    timeStr: `${h12}:${String(m).padStart(2,"0")} ${ap}`
+    timeStr: `${h12}:${String(m).padStart(2, "0")} ${ap}`
   };
 }
 
-function toMins(t) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
+function toMins(t) { const [h, m] = t.split(":").map(Number); return h * 60 + m; }
 
 function getDist(la1, lo1, la2, lo2) {
   const R = 6371000;
-  const dL = (la2-la1) * Math.PI/180;
-  const dl = (lo2-lo1) * Math.PI/180;
-  const a  = Math.sin(dL/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dl/2)**2;
+  const dL = (la2-la1) * Math.PI/180, dl = (lo2-lo1) * Math.PI/180;
+  const a = Math.sin(dL/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dl/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
@@ -92,7 +97,6 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin",  "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")    return res.status(405).json({ error: "Method not allowed" });
 
@@ -109,7 +113,7 @@ module.exports = async function handler(req, res) {
       [telegram_user_id]
     );
     if (!emps.length)
-      return res.status(404).json({ error: `Employee not found for ID: ${telegram_user_id}` });
+      return res.status(404).json({ error: "Employee not found: " + telegram_user_id });
     const emp = emps[0];
 
     // Get settings
@@ -124,7 +128,7 @@ module.exports = async function handler(req, res) {
       [emp.employee_id, today]
     );
     if (existing.length && existing[0].checkin_time)
-      return res.status(400).json({ error: "Already checked in today" });
+      return res.status(400).json({ error: "Already checked in today at " + existing[0].checkin_time });
 
     // Location check
     if (location_lat && location_lng) {
@@ -135,7 +139,7 @@ module.exports = async function handler(req, res) {
       );
       const radius = parseFloat(s.radius_meters || "100");
       if (dist > radius)
-        return res.status(400).json({ error: `Too far from office (${Math.round(dist)}m away)` });
+        return res.status(400).json({ error: `Too far from office (${Math.round(dist)}m away, max ${radius}m)` });
     }
 
     // Time zone
@@ -155,12 +159,14 @@ module.exports = async function handler(req, res) {
     // Save to DB
     await dbQuery(
       `INSERT INTO attendance
-        (employee_id, date, checkin_time, early_ot_hours, is_sunday, is_holiday,
-         ot_multiplier, checkin_status, deduction_hours, location_lat, location_lng,
-         selfie_base64, status)
+        (employee_id, date, checkin_time, early_ot_hours, is_sunday,
+         is_holiday, ot_multiplier, checkin_status, deduction_hours,
+         location_lat, location_lng, selfie_base64, status)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'present')`,
-      [emp.employee_id, today, timeStr, earlyOT, isSun, isHol, otMul,
-       zone, deduct, location_lat, location_lng, selfie_base64.substring(0, 100)]
+      [emp.employee_id, today, timeStr, earlyOT, isSun,
+       isHol, otMul, zone, deduct,
+       location_lat || null, location_lng || null,
+       selfie_base64.substring(0, 100)]
     );
 
     if (zone === "manager_zone") {
@@ -171,20 +177,19 @@ module.exports = async function handler(req, res) {
     }
 
     res.status(200).json({
-      success:      true,
-      message:      "Check-in successful!",
-      employee:     emp.name,
-      employee_id:  emp.employee_id,
-      time:         timeStr,
+      success:       true,
+      message:       "Check-in successful!",
+      employee:      emp.name,
+      employee_id:   emp.employee_id,
+      time:          timeStr,
       zone,
-      early_ot:     Math.round(earlyOT * 100) / 100,
-      deduction:    Math.round(deduct * 100) / 100,
-      is_sunday:    !!isSun,
+      early_ot:      Math.round(earlyOT * 100) / 100,
+      deduction:     Math.round(deduct  * 100) / 100,
+      is_sunday:     !!isSun,
       ot_multiplier: otMul,
     });
 
   } catch(e) {
-    console.error("Checkin error:", e.message);
     res.status(500).json({ error: e.message });
   }
 };
