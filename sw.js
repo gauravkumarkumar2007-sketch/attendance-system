@@ -1,12 +1,7 @@
-// ── Service Worker — Attendance PWA ──────────────────────────
-const CACHE_NAME = "attendance-v1";
-const CACHE_FILES = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-];
+// sw.js — Service Worker (Fixed: No POST caching)
+const CACHE_NAME = "attendance-v2";
+const CACHE_FILES = ["/", "/index.html", "/manifest.json"];
 
-// Install — Cache files
 self.addEventListener("install", e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(CACHE_FILES))
@@ -14,7 +9,6 @@ self.addEventListener("install", e => {
   self.skipWaiting();
 });
 
-// Activate — Old cache clean karo
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -24,13 +18,11 @@ self.addEventListener("activate", e => {
   self.clients.claim();
 });
 
-// Fetch — Network first, cache fallback
 self.addEventListener("fetch", e => {
-  // API calls cache mat karo
-  if (e.request.url.includes("worldtimeapi.org") ||
-      e.request.url.includes("api.")) {
-    return;
-  }
+  // Never cache POST requests or API calls
+  if (e.request.method !== "GET") return;
+  if (e.request.url.includes("/api/")) return;
+
   e.respondWith(
     fetch(e.request)
       .then(res => {
