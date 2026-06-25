@@ -19,7 +19,7 @@ function dbQuery(sql, params = []) {
       if (p === null || p === undefined) return { type: "null" };
       if (typeof p === "number") {
         if (Number.isInteger(p)) return { type: "integer", value: String(p) };
-        return { type: "float", value: String(p) };
+        return { type: "float", value: p };
       }
       return { type: "text", value: String(p) };
     });
