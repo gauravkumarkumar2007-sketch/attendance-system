@@ -119,10 +119,55 @@
     .breakdown-item{background:var(--gray);border-radius:12px;padding:12px}
     .b-label{font-size:11px;color:var(--subtext)}
     .b-value{font-size:15px;font-weight:700;margin-top:4px}
+
+    /* Login Screen */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--dark-blue);
+    }
+    .login-logo  { font-size: 56px; margin-bottom: 12px; }
+    .login-title { font-size: 26px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+    .login-sub   { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 32px; text-align: center; }
+    .login-card  { background: var(--white); border-radius: 20px; padding: 24px; width: 100%; max-width: 360px; }
+    .login-label { font-size: 13px; font-weight: 600; color: var(--subtext); margin-bottom: 8px; display: block; }
+    .login-input {
+      width: 100%; border: 2px solid #e2e8f0; border-radius: 12px;
+      padding: 14px 16px; font-size: 16px; outline: none;
+      transition: border-color 0.2s; margin-bottom: 16px;
+    }
+    .login-input:focus { border-color: var(--mid-blue); }
+    .login-btn {
+      width: 100%; background: var(--dark-blue); color: var(--white);
+      border: none; border-radius: 12px; padding: 16px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    .login-btn:active { transform: scale(0.98); }
+    .login-error { color: var(--red); font-size: 13px; margin-top: 8px; text-align: center; }
   </style>
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-logo">🏢</div>
+  <div class="login-title">Attendance System</div>
+  <div class="login-sub">Employee ID daalo login karne ke liye</div>
+  <div class="login-card">
+    <label class="login-label">Employee ID</label>
+    <input class="login-input" id="loginEmpId" type="text"
+           placeholder="EMP-001" autocomplete="off"
+           onkeydown="if(event.key==='Enter') doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Login →</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="mainApp" style="display:none">
 <div class="header">
   <div class="header-left">
     <h1>🏢 <span id="companyName">ABC Company</span></h1>
@@ -279,8 +324,8 @@
 // ── CONFIG ──────────────────────────────────────────────────
 const CONFIG = {
   companyName:      "ABC Company",
-  officeLatitude:    28.73689485959468,   // ← Change to your office lat
-  officeLongitude:   77.78592906186724,   // ← Change to your office lng
+  officeLatitude:    28.6139,   // ← Change to your office lat
+  officeLongitude:   77.2090,   // ← Change to your office lng
   radiusMeters:      100,
   earlyOT_end:      "09:30",
   normal_end:       "10:05",
@@ -291,7 +336,7 @@ const CONFIG = {
 };
 
 const EMP = { basicSalary:15000, otRate:50 };
-const EMPLOYEE = { telegramId: "123456789" }; // Change to real Telegram ID
+let EMPLOYEE = null; // Set after login
 const demoHistory = [
   {date:"17",mon:"Jun",status:"present",checkin:"9:02 AM",checkout:"6:45 PM",hours:"9h 43m",earning:529},
   {date:"16",mon:"Jun",status:"present",checkin:"8:45 AM",checkout:"6:15 PM",hours:"9h 30m",earning:504},
@@ -310,12 +355,78 @@ let todayRec={checkin:null,checkout:null,earlyOT:0,lateOT:0,deduct:0,workMins:0,
 
 // ── INIT ────────────────────────────────────────────────────
 window.onload=()=>{
-  document.getElementById("companyName").textContent=CONFIG.companyName;
+  // Show login screen first
+  document.getElementById("loginEmpId").focus();
+};
+
+async function doLogin(){
+  const empId = document.getElementById("loginEmpId").value.trim().toUpperCase();
+  const errEl = document.getElementById("loginError");
+  errEl.textContent = "";
+
+  if (!empId) {
+    errEl.textContent = "Employee ID daalna zaroori hai!";
+    return;
+  }
+
+  const btn = document.querySelector(".login-btn");
+  btn.textContent = "Loading...";
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(`/api/employees?id=${empId}`);
+    const data = await res.json();
+
+    if (!data.success || !data.employees.length) {
+      errEl.textContent = "Employee ID galat hai!";
+      btn.textContent = "Login →";
+      btn.disabled = false;
+      return;
+    }
+
+    const emp = data.employees[0];
+    if (emp.status !== "active") {
+      errEl.textContent = "Yeh account active nahi hai!";
+      btn.textContent = "Login →";
+      btn.disabled = false;
+      return;
+    }
+
+    // Set employee data
+    EMPLOYEE = {
+      id:          emp.employee_id,
+      naam:        emp.name,
+      phone:       emp.phone || "",
+      department:  emp.department || "",
+      designation: emp.designation || "",
+      joiningDate: emp.joining_date || "",
+      basicSalary: parseFloat(emp.basic_salary) || 15000,
+      otRate:      parseFloat(emp.ot_rate_per_hour) || 50,
+      telegramId:  emp.telegram_user_id,
+    };
+
+    // Show main app
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("mainApp").style.display     = "block";
+
+    // Init app
+    initApp();
+
+  } catch(e) {
+    errEl.textContent = "Server error: " + e.message;
+    btn.textContent = "Login →";
+    btn.disabled = false;
+  }
+}
+
+function initApp(){
+  document.getElementById("companyName").textContent = CONFIG.companyName;
+  loadEmployee();
   loadHistory();
   fetchIST();
   watchLocation();
-  setInterval(tick,1000);
-};
+  setInterval(tick, 1000);
+}
 
 // ── FETCH IST TIME ──────────────────────────────────────────
 async function fetchIST(){
@@ -538,7 +649,7 @@ async function doCheckin(){
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        telegram_user_id: EMPLOYEE.telegramId || "demo_user",
+        telegram_user_id: EMPLOYEE.telegramId,
         location_lat: locLat,
         location_lng: locLng,
         selfie_base64: photo||""
@@ -572,7 +683,7 @@ async function doCheckout(){
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        telegram_user_id: EMPLOYEE.telegramId || "demo_user",
+        telegram_user_id: EMPLOYEE.telegramId,
         selfie_base64: photo||""
       })
     });
@@ -610,23 +721,79 @@ function updateCard(){
   document.getElementById("recEarning").textContent  =todayRec.earning?`₹${todayRec.earning}`:"—";
 }
 
-function loadHistory(){
-  let html="",total=0,present=0,absent=0;
-  demoHistory.forEach(r=>{
-    const ok=r.status==="present";
-    if(ok){present++;total+=r.earning}else{absent++}
-    html+=`<div class="history-item">
-      <div style="width:44px;text-align:center;flex-shrink:0"><div class="h-day">${r.date}</div><div class="h-mon">${r.mon}</div></div>
-      <div style="flex:1"><div class="h-status" style="color:${ok?"var(--green)":"var(--red)"}">${ok?"✅ Present":"❌ Absent"}</div><div class="h-times">${r.checkin} – ${r.checkout}</div></div>
-      <div style="text-align:right"><div class="h-amt">${ok?"₹"+r.earning:"—"}</div><div class="h-hours">${r.hours}</div></div>
-    </div>`;
-  });
-  document.getElementById("historyList").innerHTML=html;
-  document.getElementById("salaryTotal").textContent="₹"+total.toLocaleString();
-  document.getElementById("statPresent").textContent=present;
-  document.getElementById("statAbsent").textContent=absent;
-  document.getElementById("statOT").textContent="8h 30m";
-  document.getElementById("statLate").textContent="1";
+async function loadHistory(){
+  if (!EMPLOYEE) return;
+
+  // Show loading
+  document.getElementById("historyList").innerHTML =
+    '<p style="text-align:center;color:var(--subtext);padding:20px">Loading...</p>';
+
+  try {
+    // Fetch attendance from API
+    const res  = await fetch(`/api/attendance?employee_id=${EMPLOYEE.id}`);
+    const data = await res.json();
+
+    let html="", total=0, present=0, absent=0, totalOTMins=0, late=0;
+
+    const records = data.attendance || [];
+
+    if (!records.length) {
+      document.getElementById("historyList").innerHTML =
+        '<p style="text-align:center;color:var(--subtext);padding:20px">Koi record nahi mila</p>';
+    } else {
+      records.forEach(r => {
+        const ok   = r.status === "present";
+        const dt   = new Date(r.date);
+        const day  = dt.getDate();
+        const mon  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()];
+        const earn = parseFloat(r.today_earning || 0);
+        const hrs  = r.working_hours ? `${Math.floor(r.working_hours)}h ${Math.round((r.working_hours%1)*60)}m` : "—";
+        if (ok) { present++; total += earn; }
+        else    { absent++; }
+        if (r.checkin_status === "late_deduct") late++;
+
+        html += `<div class="history-item">
+          <div style="width:44px;text-align:center;flex-shrink:0">
+            <div class="h-day">${day}</div>
+            <div class="h-mon">${mon}</div>
+          </div>
+          <div style="flex:1">
+            <div class="h-status" style="color:${ok?"var(--green)":"var(--red)"}">
+              ${ok?"✅ Present":"❌ Absent"}
+            </div>
+            <div class="h-times">${r.checkin_time||"—"} – ${r.checkout_time||"—"}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="h-amt">${ok?"₹"+Math.round(earn):"—"}</div>
+            <div class="h-hours">${hrs}</div>
+          </div>
+        </div>`;
+      });
+      document.getElementById("historyList").innerHTML = html;
+    }
+
+    // Fetch monthly salary
+    const now = new Date(Date.now() + 5.5*60*60*1000);
+    const salRes  = await fetch(`/api/salary?employee_id=${EMPLOYEE.id}&month=${now.getUTCMonth()+1}&year=${now.getUTCFullYear()}`);
+    const salData = await salRes.json();
+    const sal = salData.salary || {};
+
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    document.querySelector("#page-history .card-title").textContent =
+      `This Month's Summary (${months[now.getUTCMonth()]} ${now.getUTCFullYear()})`;
+    document.querySelector(".s-month").textContent =
+      `${months[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
+
+    document.getElementById("salaryTotal").textContent = "₹" + Math.round(parseFloat(sal.net_salary||0)).toLocaleString();
+    document.getElementById("statPresent").textContent = sal.total_present || 0;
+    document.getElementById("statAbsent").textContent  = sal.total_absent  || 0;
+    document.getElementById("statOT").textContent      = `${Math.floor(parseFloat(sal.early_ot_hours||0)+parseFloat(sal.late_ot_hours||0))}h`;
+    document.getElementById("statLate").textContent    = sal.total_late || 0;
+
+  } catch(e) {
+    document.getElementById("historyList").innerHTML =
+      `<p style="color:var(--red);text-align:center;padding:20px">Error: ${e.message}</p>`;
+  }
 }
 
 function showSuccess(icon,title,time,detail,ms){
@@ -690,5 +857,6 @@ function fmtMins(m){
 
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
+</div><!-- end mainApp -->
 </body>
 </html>
