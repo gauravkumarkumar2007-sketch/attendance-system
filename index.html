@@ -430,8 +430,10 @@ function initApp(){
 
 // ── FETCH IST TIME ──────────────────────────────────────────
 async function fetchIST(){
+  // First use device time immediately so app is responsive
+  useDeviceTime();
+
   try{
-    // Use our own Vercel API — no CORS issues!
     const ctrl=new AbortController();
     const to=setTimeout(()=>ctrl.abort(),5000);
     const res=await fetch("/api/time",{signal:ctrl.signal});
@@ -451,8 +453,7 @@ async function fetchIST(){
     document.getElementById("timeBadge").textContent="Server Time";
     updateZone(); updateBtn();
   }catch(e){
-    // Fallback to device time
-    useDeviceTime();
+    // Keep using device time
     setTimeout(fetchIST,30000);
   }
 }
@@ -573,6 +574,12 @@ function updateBtn(){
   const ico=document.getElementById("actionBtnIcon");
   const txt=document.getElementById("actionBtnText");
   const bdg=document.getElementById("empBadge");
+
+  // Wait for time to load
+  if(!serverUTC){
+    btn.className="action-btn btn-disabled";
+    ico.textContent="⏳"; txt.textContent="Loading..."; return;
+  }
 
   if(!checkedIn){
     bdg.className="emp-badge badge-absent"; bdg.textContent="Absent";
