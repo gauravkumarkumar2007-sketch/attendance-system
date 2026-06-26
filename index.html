@@ -721,41 +721,64 @@ function updateCard(){
   document.getElementById("recEarning").textContent  =todayRec.earning?`₹${todayRec.earning}`:"—";
 }
 
+async function fetchWithTimeout(url, ms=8000){
+  const ctrl = new AbortController();
+  const id   = setTimeout(()=>ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, {signal: ctrl.signal});
+    clearTimeout(id);
+    return r;
+  } catch(e) {
+    clearTimeout(id);
+    throw e;
+  }
+}
+
 async function loadHistory(){
   if (!EMPLOYEE) return;
 
-  // Show loading
   document.getElementById("historyList").innerHTML =
-    '<p style="text-align:center;color:var(--subtext);padding:20px">Loading...</p>';
+    '<p style="text-align:center;color:var(--subtext);padding:20px">⏳ Loading...</p>';
 
+  const now    = new Date(Date.now() + 5.5*60*60*1000);
+  const month  = now.getUTCMonth()+1;
+  const year   = now.getUTCFullYear();
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // Update header
   try {
-    // Fetch attendance from API
-    const res  = await fetch(`/api/attendance?employee_id=${EMPLOYEE.id}`);
-    const data = await res.json();
+    document.querySelector("#page-history .card-title").textContent =
+      `This Month's Summary (${months[now.getUTCMonth()]} ${year})`;
+    document.querySelector(".s-month").textContent =
+      `${months[now.getUTCMonth()]} ${year}`;
+  } catch(e){}
 
-    let html="", total=0, present=0, absent=0, totalOTMins=0, late=0;
+  // Load attendance + salary in parallel
+  const [attResult, salResult] = await Promise.allSettled([
+    fetchWithTimeout(`/api/attendance?employee_id=${EMPLOYEE.id}`).then(r=>r.json()),
+    fetchWithTimeout(`/api/salary?employee_id=${EMPLOYEE.id}&month=${month}&year=${year}`).then(r=>r.json()),
+  ]);
 
-    const records = data.attendance || [];
-
+  // Attendance records
+  if (attResult.status === "fulfilled" && attResult.value.success) {
+    const records = attResult.value.attendance || [];
     if (!records.length) {
       document.getElementById("historyList").innerHTML =
         '<p style="text-align:center;color:var(--subtext);padding:20px">Koi record nahi mila</p>';
     } else {
+      let html = "";
       records.forEach(r => {
-        const ok   = r.status === "present";
-        const dt   = new Date(r.date);
-        const day  = dt.getDate();
-        const mon  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()];
-        const earn = parseFloat(r.today_earning || 0);
-        const hrs  = r.working_hours ? `${Math.floor(r.working_hours)}h ${Math.round((r.working_hours%1)*60)}m` : "—";
-        if (ok) { present++; total += earn; }
-        else    { absent++; }
-        if (r.checkin_status === "late_deduct") late++;
-
+        const ok  = r.status === "present";
+        const dt  = new Date(r.date + "T00:00:00");
+        const day = dt.getDate();
+        const mon = months[dt.getMonth()];
+        const wh  = r.working_hours
+          ? `${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`
+          : "—";
+        const ot = (parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0));
         html += `<div class="history-item">
           <div style="width:44px;text-align:center;flex-shrink:0">
-            <div class="h-day">${day}</div>
-            <div class="h-mon">${mon}</div>
+            <div class="h-day">${day}</div><div class="h-mon">${mon}</div>
           </div>
           <div style="flex:1">
             <div class="h-status" style="color:${ok?"var(--green)":"var(--red)"}">
@@ -764,35 +787,31 @@ async function loadHistory(){
             <div class="h-times">${r.checkin_time||"—"} – ${r.checkout_time||"—"}</div>
           </div>
           <div style="text-align:right">
-            <div class="h-amt">${ok?"₹"+Math.round(earn):"—"}</div>
-            <div class="h-hours">${hrs}</div>
+            <div class="h-amt">${ok?wh:"—"}</div>
+            <div class="h-hours">${ot>0?ot.toFixed(1)+"h OT":""}</div>
           </div>
         </div>`;
       });
       document.getElementById("historyList").innerHTML = html;
     }
+  } else {
+    const err = attResult.reason?.message || "API error";
+    document.getElementById("historyList").innerHTML =
+      `<p style="color:var(--red);padding:20px;text-align:center">❌ ${err}</p>`;
+  }
 
-    // Fetch monthly salary
-    const now = new Date(Date.now() + 5.5*60*60*1000);
-    const salRes  = await fetch(`/api/salary?employee_id=${EMPLOYEE.id}&month=${now.getUTCMonth()+1}&year=${now.getUTCFullYear()}`);
-    const salData = await salRes.json();
-    const sal = salData.salary || {};
-
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    document.querySelector("#page-history .card-title").textContent =
-      `This Month's Summary (${months[now.getUTCMonth()]} ${now.getUTCFullYear()})`;
-    document.querySelector(".s-month").textContent =
-      `${months[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
-
-    document.getElementById("salaryTotal").textContent = "₹" + Math.round(parseFloat(sal.net_salary||0)).toLocaleString();
+  // Salary summary
+  if (salResult.status === "fulfilled" && salResult.value.success) {
+    const sal = salResult.value.salary || {};
+    document.getElementById("salaryTotal").textContent =
+      "₹" + Math.round(parseFloat(sal.net_salary||0)).toLocaleString();
     document.getElementById("statPresent").textContent = sal.total_present || 0;
     document.getElementById("statAbsent").textContent  = sal.total_absent  || 0;
-    document.getElementById("statOT").textContent      = `${Math.floor(parseFloat(sal.early_ot_hours||0)+parseFloat(sal.late_ot_hours||0))}h`;
-    document.getElementById("statLate").textContent    = sal.total_late || 0;
-
-  } catch(e) {
-    document.getElementById("historyList").innerHTML =
-      `<p style="color:var(--red);text-align:center;padding:20px">Error: ${e.message}</p>`;
+    const totalOT = parseFloat(sal.early_ot_hours||0)+parseFloat(sal.late_ot_hours||0);
+    document.getElementById("statOT").textContent   = totalOT.toFixed(1)+"h";
+    document.getElementById("statLate").textContent = sal.total_late || 0;
+  } else {
+    document.getElementById("salaryTotal").textContent = "₹0";
   }
 }
 
