@@ -1299,3 +1299,84 @@ async function loadSalAll(){
 }
 
 // S
+
+  // SETTINGS
+async function loadSettings(){
+  try{
+    const res=await fetch("/api/settings");
+    const d=await res.json();
+    const s=d.settings||{};
+    document.getElementById("sCompany").value=s.company_name||"";
+    document.getElementById("sLat").value=s.office_lat||"";
+    document.getElementById("sLng").value=s.office_lng||"";
+    document.getElementById("sRadius").value=s.attendance_radius||100;
+    document.getElementById("sOTRate").value=s.ot_rate||50;
+    document.getElementById("sEarlyOT").value=s.early_ot_cutoff||"09:30";
+    document.getElementById("sNormalEnd").value=s.normal_end||"10:05";
+    document.getElementById("sMgrEnd").value=s.mgr_end||"10:30";
+    document.getElementById("sCoolStart").value=s.cooling_start||"17:50";
+    document.getElementById("sCoolEnd").value=s.cooling_end||"18:10";
+  }catch(e){}
+}
+
+async function saveSettings(){
+  const body={
+    company_name:document.getElementById("sCompany").value,
+    office_lat:document.getElementById("sLat").value,
+    office_lng:document.getElementById("sLng").value,
+    attendance_radius:document.getElementById("sRadius").value,
+    ot_rate:document.getElementById("sOTRate").value,
+    early_ot_cutoff:document.getElementById("sEarlyOT").value,
+    normal_end:document.getElementById("sNormalEnd").value,
+    mgr_end:document.getElementById("sMgrEnd").value,
+    cooling_start:document.getElementById("sCoolStart").value,
+    cooling_end:document.getElementById("sCoolEnd").value,
+  };
+  try{
+    await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    document.getElementById("settingsMsg").textContent="✅ Settings saved!";
+    setTimeout(()=>document.getElementById("settingsMsg").textContent="",3000);
+  }catch(e){showToast("Error: "+e.message,"err");}
+}
+
+async function changeMgrPwd(){
+  const np=document.getElementById("sNewPwd").value;
+  const cp=document.getElementById("sConfPwd").value;
+  if(!np){showToast("Enter new password!","err");return;}
+  if(np!==cp){showToast("Passwords don't match!","err");return;}
+  try{
+    await fetch("/api/manager-login",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({new_password:np})});
+    document.getElementById("settingsMsg").textContent="✅ Password changed!";
+    document.getElementById("sNewPwd").value="";
+    document.getElementById("sConfPwd").value="";
+    setTimeout(()=>document.getElementById("settingsMsg").textContent="",3000);
+  }catch(e){showToast("Error: "+e.message,"err");}
+}
+
+// HELPERS
+function showPage(p){
+  document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(el=>el.classList.remove("active"));
+  document.getElementById("page-"+p).classList.add("active");
+  document.getElementById("nav-"+p).classList.add("active");
+  if(p==="history")loadHistory();
+}
+
+function openModal(id){document.getElementById(id).classList.add("show");}
+function closeModal(id){
+  document.getElementById(id).classList.remove("show");
+  if(id==="selfieModal")stopCam();
+}
+
+function showToast(msg,type=""){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.className="toast"+(type?" "+type:"");
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3000);
+}
+
+function fmtHrs(h){return`${Math.floor(h)}h ${Math.round((h%1)*60)}m`;}
+function fmtMins(m){return`${Math.floor(m/60)}h ${m%60}m`;}
+</script>
+</body>
+</html>
