@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
     const ist   = new Date(Date.now()+5.5*60*60*1000);
     const today = ist.toISOString().split("T")[0];
     const att   = await dbQuery(
-      "SELECT checkin_time,checkout_time,status FROM attendance WHERE employee_id=? AND date=?",
+      "SELECT checkin_time,checkout_time,status,working_hours,early_ot_hours,late_ot_hours FROM attendance WHERE employee_id=? AND date=?",
       [emp.employee_id, today]
     );
     const todayAtt = att[0]||null;
