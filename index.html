@@ -271,6 +271,16 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <div class="rec-row"><span class="rec-label">OT Rate</span><span class="rec-value rv-orange" id="profOT">-</span></div>
         <div class="rec-row"><span class="rec-label">Joining Date</span><span class="rec-value" id="profJoin">-</span></div>
       </div>
+      <div class="card">
+        <div class="card-title">Raise a Dispute</div>
+        <p style="font-size:13px;color:var(--subtext);margin-bottom:10px">Attendance galat hai? Manager ko batao.</p>
+        <textarea id="disputeText" rows="3" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;resize:vertical;font-family:inherit" placeholder="Issue describe karo..."></textarea>
+        <button onclick="submitDispute()" style="margin-top:10px;width:100%;padding:13px;background:var(--dark-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">📤 Send to Manager</button>
+      </div>
+      <div class="card">
+        <div class="card-title">My Disputes</div>
+        <div id="myDisputesList"><p style="text-align:center;color:var(--subtext);padding:14px;font-size:13px">Loading...</p></div>
+      </div>
       <div style="padding:16px;text-align:center">
         <button onclick="doLogout()" style="background:none;border:none;color:var(--red);font-size:14px;cursor:pointer;font-weight:600">🚪 Logout</button>
       </div>
@@ -291,7 +301,9 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     <button class="mgr-tab active" onclick="showMgrSection('overview')">📊 Overview</button>
     <button class="mgr-tab" onclick="showMgrSection('employees')">👥 Employees</button>
     <button class="mgr-tab" onclick="showMgrSection('attendance')">📅 Attendance</button>
+    <button class="mgr-tab" onclick="showMgrSection('approvals')">⚠️ Approvals <span id="apprBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
     <button class="mgr-tab" onclick="showMgrSection('salary')">💰 Salary</button>
+    <button class="mgr-tab" onclick="showMgrSection('disputes')">⚠️ Disputes <span id="dispBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
     <button class="mgr-tab" onclick="showMgrSection('settings')">⚙️ Settings</button>
   </div>
   <div class="mgr-content">
@@ -341,6 +353,10 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
       </div>
       <div id="attTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select date to view</p></div>
     </div>
+    <div class="mgr-section" id="mgr-approvals">
+      <p style="font-size:13px;color:var(--subtext);margin-bottom:14px">Employees who checked in between 10:05–10:30 AM — approve (no deduction) or reject (deduction applies)</p>
+      <div id="apprTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
+    </div>
     <div class="mgr-section" id="mgr-salary">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <select id="salMonth" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none">
@@ -353,6 +369,16 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
       </div>
       <div id="salTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select month to view</p></div>
     </div>
+    <div class="mgr-section" id="mgr-disputes">
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <select id="dispFilter" onchange="loadDisputes()" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none">
+          <option value="pending">Pending</option>
+          <option value="resolved">Resolved</option>
+          <option value="">All</option>
+        </select>
+      </div>
+      <div id="dispTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
+    </div>
     <div class="mgr-section" id="mgr-settings">
       <div class="card">
         <div class="card-title">System Settings</div>
@@ -361,12 +387,14 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <label>Office Latitude</label><input type="text" id="sLat" placeholder="28.6139"/>
           <label>Office Longitude</label><input type="text" id="sLng" placeholder="77.2090"/>
           <label>Attendance Radius (meters)</label><input type="number" id="sRadius" placeholder="100"/>
-          <label>Normal OT Rate (Rs./hour)</label><input type="number" id="sOTRate" placeholder="50"/>
+          <label>Working Days Per Month</label><input type="number" id="sWorkDays" placeholder="26"/>
           <label>Early OT Cutoff (HH:MM)</label><input type="text" id="sEarlyOT" placeholder="09:30"/>
           <label>Normal Check-in End (HH:MM)</label><input type="text" id="sNormalEnd" placeholder="10:05"/>
           <label>Manager Zone End (HH:MM)</label><input type="text" id="sMgrEnd" placeholder="10:30"/>
+          <label>Office End Time (HH:MM)</label><input type="text" id="sOfficeEnd" placeholder="18:00"/>
           <label>Cooling Period Start (HH:MM)</label><input type="text" id="sCoolStart" placeholder="17:50"/>
-          <label>Cooling Period End (HH:MM)</label><input type="text" id="sCoolEnd" placeholder="18:10"/>
+          <label>Cooling Period End / OT Start (HH:MM)</label><input type="text" id="sCoolEnd" placeholder="18:10"/>
+          <p style="font-size:11px;color:var(--subtext);margin-top:10px">💡 OT rate har employee ka alag hota hai — Employees tab mein set karo</p>
         </div>
         <button class="mgr-btn-primary" onclick="saveSettings()">Save Settings</button>
       </div>
@@ -654,10 +682,14 @@ function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=nul
 function capturePhoto(){
   const v=document.getElementById("selfieVid");
   const c=document.getElementById("selfieCvs");
-  c.width=v.videoWidth||1280;c.height=v.videoHeight||720;
+  // Resize to smaller size for faster upload/storage (max 480px wide)
+  const srcW=v.videoWidth||1280, srcH=v.videoHeight||720;
+  const targetW=480;
+  const scale=targetW/srcW;
+  c.width=targetW; c.height=Math.round(srcH*scale);
   const ctx=c.getContext("2d");
   ctx.scale(-1,1);ctx.drawImage(v,-c.width,0,c.width,c.height);ctx.scale(-1,1);
-  photo=c.toDataURL("image/jpeg",0.7);
+  photo=c.toDataURL("image/jpeg",0.6);
   document.getElementById("selfieImg").src=photo;
   document.getElementById("selfieBox").style.display="none";
   document.getElementById("selfiePreview").style.display="block";
@@ -783,6 +815,8 @@ function initMgr(){
   document.getElementById("mgrDate").textContent=`${DAYS[ist.getUTCDay()]}, ${ist.getUTCDate()} ${MONS[ist.getUTCMonth()]} ${ist.getUTCFullYear()}`;
   loadOverview();
   loadEmployees();
+  loadApprovals();
+  loadDisputes();
   document.getElementById("attDate").value=ist.toISOString().split("T")[0];
   document.getElementById("salMonth").value=String(ist.getUTCMonth()+1);
   document.getElementById("salYear").value=String(ist.getUTCFullYear());
@@ -792,7 +826,83 @@ function showMgrSection(s){
   document.querySelectorAll(".mgr-section").forEach(el=>el.classList.remove("active"));
   document.querySelectorAll(".mgr-tab").forEach(el=>el.classList.remove("active"));
   document.getElementById("mgr-"+s).classList.add("active");
-  event.target.classList.add("active");
+  event.target.closest(".mgr-tab").classList.add("active");
+  if(s==="approvals") loadApprovals();
+  if(s==="disputes") loadDisputes();
+}
+async function loadDisputes(){
+  const status=document.getElementById("dispFilter")?document.getElementById("dispFilter").value:"pending";
+  try{
+    const url = status ? "/api/disputes?status="+status : "/api/disputes";
+    const res=await fetch(url);
+    const d=await res.json();
+    const rows=d.disputes||[];
+
+    const pendRes=await fetch("/api/disputes?status=pending");
+    const pendData=await pendRes.json();
+    const pendCount=(pendData.disputes||[]).length;
+    const badge=document.getElementById("dispBadge");
+    if(pendCount){badge.style.display="inline-block";badge.textContent=pendCount;}
+    else{badge.style.display="none";}
+
+    const tbl=document.getElementById("dispTable");
+    if(!rows.length){tbl.innerHTML='<p style="text-align:center;padding:20px;color:var(--subtext)">No disputes</p>';return;}
+    let html="";
+    rows.forEach(r=>{
+      html+=`<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div><b>${r.name}</b> <span style="color:var(--subtext);font-size:12px">(${r.department||"—"})</span></div>
+          <span class="badge badge-${r.status==="resolved"?"present":"pending"}">${r.status}</span>
+        </div>
+        <div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Date: ${r.date||"—"}</div>
+        <div style="font-size:14px;margin-bottom:10px">${r.issue}</div>
+        ${r.manager_reply?`<div style="background:var(--light-green);border-radius:8px;padding:10px;font-size:13px;color:var(--green);margin-bottom:8px">Reply: ${r.manager_reply}</div>`:""}
+        ${r.status==="pending"?`
+          <textarea id="reply_${r.id}" rows="2" placeholder="Type reply..." style="width:100%;border:2px solid #e2e8f0;border-radius:8px;padding:8px;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px"></textarea>
+          <button class="mgr-btn-success" onclick="resolveDispute(${r.id})">✅ Reply &amp; Resolve</button>
+        `:""}
+      </div>`;
+    });
+    tbl.innerHTML=html;
+  }catch(e){document.getElementById("dispTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+async function resolveDispute(id){
+  const reply=document.getElementById("reply_"+id).value.trim();
+  if(!reply){showToast("Reply likho pehle!","err");return;}
+  try{
+    await fetch("/api/disputes",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"resolved",manager_reply:reply})});
+    showToast("✅ Resolved!","ok");
+    loadDisputes();
+  }catch(e){showToast("Error: "+e.message,"err");}
+}
+async function loadApprovals(){
+  try{
+    const res=await fetch("/api/approvals?status=pending");
+    const d=await res.json();
+    const rows=d.approvals||[];
+    const badge=document.getElementById("apprBadge");
+    if(rows.length){badge.style.display="inline-block";badge.textContent=rows.length;}
+    else{badge.style.display="none";}
+    const tbl=document.getElementById("apprTable");
+    if(!rows.length){tbl.innerHTML='<p style="text-align:center;padding:20px;color:var(--subtext)">✅ No pending approvals</p>';return;}
+    let html='<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Date</th><th>Check-in Time</th><th>Action</th></tr>';
+    rows.forEach(r=>{
+      html+=`<tr><td><b>${r.name}</b></td><td>${r.department||"—"}</td><td>${r.date}</td><td>${r.checkin_time}</td><td>
+        <button class="mgr-btn-success" onclick="decideApproval('${r.employee_id}','${r.date}','approved')">✅ Approve</button>
+        &nbsp;
+        <button class="mgr-btn-danger" onclick="decideApproval('${r.employee_id}','${r.date}','rejected')">❌ Reject</button>
+      </td></tr>`;
+    });
+    html+="</table></div>";
+    tbl.innerHTML=html;
+  }catch(e){document.getElementById("apprTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+async function decideApproval(empId,date,decision){
+  try{
+    await fetch("/api/approvals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:empId,date,decision})});
+    showToast(decision==="approved"?"✅ Approved!":"❌ Rejected — deduction applied","ok");
+    loadApprovals();
+  }catch(e){showToast("Error: "+e.message,"err");}
 }
 async function loadOverview(){
   try{
@@ -892,6 +1002,7 @@ async function deactivateEmp(id,name){
     loadEmployees();
   }catch(e){showToast("Error: "+e.message,"err");}
 }
+let attPhotoData={};
 async function loadAttAll(){
   const date=document.getElementById("attDate").value;
   if(!date){showToast("Select a date!","err");return;}
@@ -902,15 +1013,37 @@ async function loadAttAll(){
     const present=d.attendance||[];
     const absent=d.absent||[];
     const all=[...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
-    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr>`;
+    attPhotoData={};
+    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>Photo</th></tr>`;
     all.forEach(r=>{
       const ok=r.status==="present";
       const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
-      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td></tr>`;
+      const hasPhoto=r.selfie_base64||r.checkout_selfie_base64;
+      if(hasPhoto) attPhotoData[r.employee_id]={name:r.name||r.employee_id,checkin:r.selfie_base64||null,checkout:r.checkout_selfie_base64||null,checkinTime:r.checkin_time,checkoutTime:r.checkout_time};
+      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
   }catch(e){document.getElementById("attTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+function viewPhotos(empId){
+  const d=attPhotoData[empId];
+  if(!d)return;
+  let html=`<div style="text-align:center"><h3 style="font-size:17px;font-weight:700;margin-bottom:16px">${d.name}</h3>`;
+  html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">`;
+  if(d.checkin){
+    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-in (${d.checkinTime||"—"})</div><img src="${d.checkin}" style="width:100%;border-radius:12px;border:2px solid var(--green)"/></div>`;
+  }else{
+    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-in</div><div style="background:var(--gray);border-radius:12px;padding:40px 0;color:var(--subtext);font-size:13px">No photo</div></div>`;
+  }
+  if(d.checkout){
+    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-out (${d.checkoutTime||"—"})</div><img src="${d.checkout}" style="width:100%;border-radius:12px;border:2px solid var(--orange)"/></div>`;
+  }else{
+    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-out</div><div style="background:var(--gray);border-radius:12px;padding:40px 0;color:var(--subtext);font-size:13px">No photo</div></div>`;
+  }
+  html+=`</div><button onclick="closeModal('successModal')" style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">Close</button></div>`;
+  document.getElementById("successContent").innerHTML=html;
+  openModal("successModal");
 }
 async function loadSalAll(){
   const month=document.getElementById("salMonth").value;
@@ -942,10 +1075,11 @@ async function loadSettings(){
     document.getElementById("sLat").value=s.office_lat||"";
     document.getElementById("sLng").value=s.office_lng||"";
     document.getElementById("sRadius").value=s.radius_meters||100;
-    document.getElementById("sOTRate").value=s.normal_ot_rate||50;
+    document.getElementById("sWorkDays").value=s.working_days_month||26;
     document.getElementById("sEarlyOT").value=s.early_ot_cutoff||"09:30";
     document.getElementById("sNormalEnd").value=s.normal_end||"10:05";
     document.getElementById("sMgrEnd").value=s.manager_zone_end||"10:30";
+    document.getElementById("sOfficeEnd").value=s.office_end||"18:00";
     document.getElementById("sCoolStart").value=s.cooling_start||"17:50";
     document.getElementById("sCoolEnd").value=s.cooling_end||"18:10";
   }catch(e){}
@@ -956,10 +1090,11 @@ async function saveSettings(){
     office_lat:document.getElementById("sLat").value,
     office_lng:document.getElementById("sLng").value,
     radius_meters:document.getElementById("sRadius").value,
-    normal_ot_rate:document.getElementById("sOTRate").value,
+    working_days_month:document.getElementById("sWorkDays").value,
     early_ot_cutoff:document.getElementById("sEarlyOT").value,
     normal_end:document.getElementById("sNormalEnd").value,
     manager_zone_end:document.getElementById("sMgrEnd").value,
+    office_end:document.getElementById("sOfficeEnd").value,
     cooling_start:document.getElementById("sCoolStart").value,
     cooling_end:document.getElementById("sCoolEnd").value,
   };
@@ -994,6 +1129,41 @@ function showPage(p){
   document.getElementById("page-"+p).classList.add("active");
   document.getElementById("nav-"+p).classList.add("active");
   if(p==="history")loadHistory();
+  if(p==="profile")loadMyDisputes();
+}
+async function loadMyDisputes(){
+  if(!EMP)return;
+  try{
+    const res=await fetch("/api/disputes?employee_id="+EMP.id);
+    const d=await res.json();
+    const rows=d.disputes||[];
+    if(!rows.length){document.getElementById("myDisputesList").innerHTML='<p style="text-align:center;color:var(--subtext);padding:14px;font-size:13px">No disputes yet</p>';return;}
+    let html="";
+    rows.forEach(r=>{
+      const statusColor=r.status==="resolved"?"var(--green)":"var(--yellow)";
+      html+=`<div style="padding:12px 0;border-bottom:1px solid var(--gray)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--subtext)">${r.date||"—"}</span>
+          <span class="badge" style="background:${r.status==="resolved"?"var(--light-green)":"var(--light-yellow)"};color:${statusColor}">${r.status}</span>
+        </div>
+        <div style="font-size:13px;margin-bottom:4px">${r.issue}</div>
+        ${r.manager_reply?`<div style="font-size:12px;color:var(--green);background:var(--light-green);border-radius:8px;padding:8px;margin-top:6px">👤 Manager: ${r.manager_reply}</div>`:""}
+      </div>`;
+    });
+    document.getElementById("myDisputesList").innerHTML=html;
+  }catch(e){document.getElementById("myDisputesList").innerHTML=`<p style="color:var(--red);font-size:12px;padding:10px">❌ ${e.message}</p>`;}
+}
+async function submitDispute(){
+  const txt=document.getElementById("disputeText").value.trim();
+  if(!txt){showToast("Issue likho pehle!","err");return;}
+  try{
+    const ist=new Date(Date.now()+5.5*60*60*1000);
+    const today=ist.toISOString().split("T")[0];
+    await fetch("/api/disputes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:EMP.id,date:today,issue:txt})});
+    showToast("✅ Sent to manager!","ok");
+    document.getElementById("disputeText").value="";
+    loadMyDisputes();
+  }catch(e){showToast("Error: "+e.message,"err");}
 }
 function openModal(id){document.getElementById(id).classList.add("show");}
 function closeModal(id){
