@@ -22,8 +22,6 @@
   --text:#1e293b;--subtext:#64748b;
 }
 html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef2f7;color:var(--text);-webkit-tap-highlight-color:transparent}
-
-/* LOGIN */
 .login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--dark-blue)}
 .login-logo{font-size:56px;margin-bottom:12px;text-align:center}
 .login-title{font-size:26px;font-weight:700;color:#fff;margin-bottom:6px;text-align:center}
@@ -40,8 +38,6 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .mgr-btn{width:100%;background:transparent;color:var(--dark-gray);border:2px solid #e2e8f0;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
 .mgr-btn:hover{border-color:var(--dark-blue);color:var(--dark-blue)}
 .login-err{color:var(--red);font-size:13px;margin-top:10px;text-align:center;min-height:18px}
-
-/* HEADER */
 .header{background:var(--dark-blue);color:#fff;padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
 .header-left h1{font-size:17px;font-weight:700}
 .header-left p{font-size:11px;opacity:.65;margin-top:1px}
@@ -51,15 +47,9 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .time-badge{font-size:9px;padding:2px 7px;border-radius:8px;margin-top:2px;display:inline-block}
 .badge-server{background:var(--green);color:#fff}
 .badge-device{background:var(--yellow);color:#fff}
-
-/* CONTENT */
 .content{padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
-
-/* CARDS */
 .card{background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 16px rgba(0,0,0,.1)}
 .card-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--subtext);margin-bottom:12px}
-
-/* ZONE */
 .zone-banner{border-radius:14px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
 .zone-icon{font-size:28px;line-height:1}
 .zone-name{font-size:15px;font-weight:700}
@@ -71,8 +61,6 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .z-cooling{background:var(--light-cooling);color:var(--cooling)}
 .z-ot{background:var(--light-orange);color:var(--orange)}
 .z-unknown{background:var(--gray);color:var(--dark-gray)}
-
-/* PILLS */
 .status-row{display:flex;gap:10px;margin-bottom:14px}
 .pill{flex:1;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px}
 .pill-icon{font-size:18px}
@@ -83,8 +71,6 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .p-err{background:var(--light-red);color:var(--red)}
 .p-wait{background:var(--gray);color:var(--dark-gray)}
 .p-info{background:var(--light-yellow);color:var(--yellow)}
-
-/* EMP */
 .emp-row{display:flex;align-items:center;gap:14px}
 .emp-avatar{width:52px;height:52px;border-radius:50%;background:var(--dark-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
 .emp-name{font-size:17px;font-weight:700}
@@ -93,51 +79,37 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .emp-badge{margin-left:auto;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
 .b-present{background:var(--light-green);color:var(--green)}
 .b-absent{background:var(--light-red);color:var(--red)}
-
-/* RECORD */
 .rec-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray)}
 .rec-row:last-child{border-bottom:none;padding-bottom:0}
 .rec-label{font-size:13px;color:var(--subtext)}
 .rec-value{font-size:13px;font-weight:600}
 .rv-green{color:var(--green)}
 .rv-orange{color:var(--orange)}
-
-/* BTN */
 .action-btn{width:100%;border:none;border-radius:16px;padding:18px;font-size:17px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
 .action-btn:active{transform:scale(.97)}
 .btn-in{background:var(--green);color:#fff}
 .btn-out{background:var(--orange);color:#fff}
 .btn-off{background:var(--gray);color:var(--subtext);cursor:not-allowed}
-
-/* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
 .modal{background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
 .modal-title{font-size:18px;font-weight:700;margin-bottom:6px}
 .modal-sub{font-size:13px;color:var(--subtext);margin-bottom:20px}
 .modal-close{float:right;background:var(--gray);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;line-height:32px;text-align:center}
-
-/* SELFIE */
 .selfie-box{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4}
 .selfie-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
 .selfie-canvas{display:none}
 .selfie-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:16px;display:flex;justify-content:center}
 .capture-btn{width:64px;height:64px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:24px}
 .capture-btn:active{transform:scale(.9)}
-
-/* STEPS */
 .steps{display:flex;gap:8px;margin-bottom:16px}
 .step{flex:1;height:4px;border-radius:4px;background:var(--gray)}
 .step.active{background:var(--mid-blue)}
 .step.done{background:var(--green)}
-
-/* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--dark-gray);color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:300;transition:transform .3s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2)}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.ok{background:var(--green)}
 .toast.err{background:var(--red)}
-
-/* NAVBAR */
 .navbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;z-index:100;max-width:480px;margin:0 auto}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 14px;cursor:pointer;border:none;background:none;color:var(--subtext);gap:3px}
 .nav-item.active{color:var(--dark-blue)}
@@ -145,29 +117,21 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .nav-label{font-size:10px;font-weight:500}
 .page{display:none}
 .page.active{display:block}
-
-/* HISTORY */
 .history-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray)}
 .history-item:last-child{border-bottom:none}
 .h-day{font-size:20px;font-weight:700;color:var(--dark-blue)}
 .h-mon{font-size:10px;color:var(--subtext)}
 .h-status{font-size:13px;font-weight:600}
 .h-times{font-size:11px;color:var(--subtext);margin-top:2px}
-
-/* SALARY */
 .sal-card{border-radius:16px;padding:20px;background:linear-gradient(135deg,var(--dark-blue),#2563eb);color:#fff;margin-bottom:14px}
 .sal-amount{font-size:32px;font-weight:700;margin:4px 0}
 .sal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sal-item{background:var(--gray);border-radius:12px;padding:12px}
 .si-label{font-size:11px;color:var(--subtext)}
 .si-value{font-size:15px;font-weight:700;margin-top:4px}
-
-/* AUTO LOGOUT COUNTDOWN */
 .countdown-box{background:var(--light-green);border-radius:12px;padding:14px;text-align:center;margin-top:16px}
 .countdown-num{font-size:32px;font-weight:700;color:var(--green)}
 .countdown-txt{font-size:13px;color:var(--green);margin-top:4px}
-
-/* MANAGER DASHBOARD */
 .mgr-wrap{min-height:100vh;background:#f0f4f8}
 .mgr-header{background:var(--dark-blue);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .mgr-header h1{font-size:18px;font-weight:700}
@@ -178,45 +142,31 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .mgr-content{padding:16px;max-width:1200px;margin:0 auto}
 .mgr-section{display:none}
 .mgr-section.active{display:block}
-
-/* MANAGER CARDS */
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
 .stat-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .stat-icon{font-size:28px;margin-bottom:8px}
 .stat-value{font-size:28px;font-weight:700;color:var(--dark-blue)}
 .stat-label{font-size:12px;color:var(--subtext);margin-top:4px}
-
-/* TABLE */
 .mgr-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .mgr-table th{background:var(--dark-blue);color:#fff;padding:12px 14px;text-align:left;font-size:13px;font-weight:600}
 .mgr-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--gray)}
 .mgr-table tr:last-child td{border-bottom:none}
 .mgr-table tr:hover td{background:var(--gray)}
-
-/* BADGES */
 .badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .badge-present{background:var(--light-green);color:var(--green)}
 .badge-absent{background:var(--light-red);color:var(--red)}
 .badge-late{background:var(--light-yellow);color:var(--yellow)}
 .badge-pending{background:var(--light-orange);color:var(--orange)}
-
-/* FORM */
 .mgr-form label{display:block;font-size:13px;font-weight:600;color:var(--subtext);margin-bottom:6px;margin-top:14px}
 .mgr-form input,.mgr-form select{width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:12px;font-size:14px;outline:none}
 .mgr-form input:focus,.mgr-form select:focus{border-color:var(--mid-blue)}
 .mgr-btn-primary{background:var(--dark-blue);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px}
 .mgr-btn-danger{background:var(--red);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
 .mgr-btn-success{background:var(--green);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
-
-@media(min-width:768px){
-  .stat-grid{grid-template-columns:repeat(4,1fr)}
-  .content{max-width:600px}
-}
+@media(min-width:768px){.stat-grid{grid-template-columns:repeat(4,1fr)}.content{max-width:600px}}
 </style>
 </head>
 <body>
-
-<!-- ══ LOGIN SCREEN ══════════════════════════════════════════ -->
 <div id="loginWrap" class="login-wrap">
   <div class="login-logo">🏢</div>
   <div class="login-title">Attendance System</div>
@@ -225,84 +175,58 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     <label class="login-label">Employee ID</label>
     <input class="login-input" id="loginId" type="text" placeholder="EMP-001" autocomplete="off"/>
     <label class="login-label">Password</label>
-    <input class="login-input" id="loginPwd" type="password" placeholder="••••••"
-           onkeydown="if(event.key==='Enter')doLogin()"/>
+    <input class="login-input" id="loginPwd" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Login →</button>
     <div class="login-divider">OR</div>
     <button class="mgr-btn" onclick="showMgrLogin()">🔐 Manager Login</button>
     <div class="login-err" id="loginErr"></div>
   </div>
 </div>
-
-<!-- ══ MANAGER LOGIN ════════════════════════════════════════ -->
 <div id="mgrLoginWrap" class="login-wrap" style="display:none">
   <div class="login-logo">🔐</div>
   <div class="login-title">Manager Access</div>
   <div class="login-sub">Enter manager password</div>
   <div class="login-card">
     <label class="login-label">Manager Password</label>
-    <input class="login-input" id="mgrPwd" type="password" placeholder="••••••"
-           onkeydown="if(event.key==='Enter')doMgrLogin()"/>
+    <input class="login-input" id="mgrPwd" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doMgrLogin()"/>
     <button class="login-btn" id="mgrLoginBtn" onclick="doMgrLogin()">Login →</button>
     <button onclick="backToLogin()" style="width:100%;background:none;border:none;color:var(--subtext);font-size:14px;cursor:pointer;margin-top:12px">← Back</button>
     <div class="login-err" id="mgrLoginErr"></div>
   </div>
 </div>
-
-<!-- ══ EMPLOYEE APP ═════════════════════════════════════════ -->
 <div id="empApp" style="display:none">
   <div class="header">
-    <div class="header-left">
-      <h1>🏢 ABC Company</h1>
-      <p>Attendance System</p>
-    </div>
+    <div class="header-left"><h1>🏢 ABC Company</h1><p>Attendance System</p></div>
     <div class="header-time">
       <div class="time-display" id="timeDisp">--:-- --</div>
       <div class="date-display" id="dateDisp">Loading...</div>
       <span class="time-badge badge-device" id="timeBadge">Device Time</span>
     </div>
   </div>
-
   <div class="content">
     <div class="page active" id="page-home">
       <div class="zone-banner z-unknown" id="zoneBanner">
         <div class="zone-icon" id="zoneIcon">⏳</div>
-        <div>
-          <div class="zone-name" id="zoneName">Loading...</div>
-          <div class="zone-desc" id="zoneDesc">Fetching time</div>
-        </div>
+        <div><div class="zone-name" id="zoneName">Loading...</div><div class="zone-desc" id="zoneDesc">Fetching time</div></div>
       </div>
-
       <div class="card">
         <div class="card-title">Employee</div>
         <div class="emp-row">
           <div class="emp-avatar" id="empAv">?</div>
-          <div>
-            <div class="emp-name" id="empName">-</div>
-            <div class="emp-id"   id="empId">-</div>
-            <div class="emp-dept" id="empDept">-</div>
-          </div>
+          <div><div class="emp-name" id="empName">-</div><div class="emp-id" id="empId">-</div><div class="emp-dept" id="empDept">-</div></div>
           <span class="emp-badge b-absent" id="empBadge">Absent</span>
         </div>
       </div>
-
       <div class="status-row">
         <div class="pill p-wait" id="pillLoc">
           <div class="pill-icon">📍</div>
-          <div class="pill-text">
-            <span class="pill-label">Location</span>
-            <span class="pill-value" id="locTxt">Checking...</span>
-          </div>
+          <div class="pill-text"><span class="pill-label">Location</span><span class="pill-value" id="locTxt">Checking...</span></div>
         </div>
         <div class="pill p-wait" id="pillTime">
           <div class="pill-icon">⏰</div>
-          <div class="pill-text">
-            <span class="pill-label">Time</span>
-            <span class="pill-value" id="timeTxt">Loading...</span>
-          </div>
+          <div class="pill-text"><span class="pill-label">Time</span><span class="pill-value" id="timeTxt">Loading...</span></div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-title">Today's Record</div>
         <div class="rec-row"><span class="rec-label">Check-in</span><span class="rec-value rv-green" id="recIn">—</span></div>
@@ -311,13 +235,10 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <div class="rec-row"><span class="rec-label">OT Hours</span><span class="rec-value rv-orange" id="recOT">—</span></div>
         <div class="rec-row"><span class="rec-label">Today's Earnings</span><span class="rec-value rv-green" id="recEarn">—</span></div>
       </div>
-
       <button class="action-btn btn-off" id="actionBtn" onclick="startAction()">
-        <span id="btnIcon">⏳</span>
-        <span id="btnTxt">Loading...</span>
+        <span id="btnIcon">⏳</span><span id="btnTxt">Loading...</span>
       </button>
     </div>
-
     <div class="page" id="page-history">
       <div class="card">
         <div class="card-title" id="histTitle">This Month</div>
@@ -338,17 +259,12 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <div id="histList"><p style="text-align:center;color:var(--subtext);padding:20px">⏳ Loading...</p></div>
       </div>
     </div>
-
     <div class="page" id="page-profile">
       <div class="card">
         <div class="card-title">My Profile</div>
         <div class="emp-row" style="margin-bottom:16px">
           <div class="emp-avatar" style="width:64px;height:64px;font-size:26px" id="profAv">?</div>
-          <div>
-            <div class="emp-name" id="profName">-</div>
-            <div class="emp-id"   id="profId">-</div>
-            <div class="emp-dept" id="profDept">-</div>
-          </div>
+          <div><div class="emp-name" id="profName">-</div><div class="emp-id" id="profId">-</div><div class="emp-dept" id="profDept">-</div></div>
         </div>
         <div class="rec-row"><span class="rec-label">Phone</span><span class="rec-value" id="profPhone">-</span></div>
         <div class="rec-row"><span class="rec-label">Basic Salary</span><span class="rec-value rv-green" id="profSal">-</span></div>
@@ -360,24 +276,17 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
       </div>
     </div>
   </div>
-
   <div class="navbar">
     <button class="nav-item active" id="nav-home" onclick="showPage('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
     <button class="nav-item" id="nav-history" onclick="showPage('history')"><span class="nav-icon">📅</span><span class="nav-label">History</span></button>
     <button class="nav-item" id="nav-profile" onclick="showPage('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></button>
   </div>
 </div>
-
-<!-- ══ MANAGER DASHBOARD ════════════════════════════════════ -->
 <div id="mgrApp" style="display:none">
   <div class="mgr-header">
-    <div>
-      <h1>🏢 Manager Dashboard</h1>
-      <p style="font-size:11px;opacity:.65;margin-top:2px" id="mgrDate">-</p>
-    </div>
+    <div><h1>🏢 Manager Dashboard</h1><p style="font-size:11px;opacity:.65;margin-top:2px" id="mgrDate">-</p></div>
     <button class="mgr-logout-btn" onclick="doMgrLogout()">Logout</button>
   </div>
-
   <div class="mgr-tabs">
     <button class="mgr-tab active" onclick="showMgrSection('overview')">📊 Overview</button>
     <button class="mgr-tab" onclick="showMgrSection('employees')">👥 Employees</button>
@@ -385,10 +294,7 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     <button class="mgr-tab" onclick="showMgrSection('salary')">💰 Salary</button>
     <button class="mgr-tab" onclick="showMgrSection('settings')">⚙️ Settings</button>
   </div>
-
   <div class="mgr-content">
-
-    <!-- OVERVIEW -->
     <div class="mgr-section active" id="mgr-overview">
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="ovPresent">-</div><div class="stat-label">Present Today</div></div>
@@ -396,46 +302,31 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-value" id="ovLate">-</div><div class="stat-label">Late Today</div></div>
         <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="ovTotal">-</div><div class="stat-label">Total Employees</div></div>
       </div>
-
       <div class="card" style="max-width:100%">
         <div class="card-title">Today's Attendance</div>
         <div id="ovTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
       </div>
     </div>
-
-    <!-- EMPLOYEES -->
     <div class="mgr-section" id="mgr-employees">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h2 style="font-size:16px;font-weight:700">All Employees</h2>
         <button class="mgr-btn-primary" onclick="showAddEmp()">+ Add Employee</button>
       </div>
       <div id="empTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
-
-      <!-- Add Employee Form -->
       <div id="addEmpForm" style="display:none" class="card" style="margin-top:16px">
         <div class="card-title" id="addEmpTitle">Add New Employee</div>
         <div class="mgr-form">
           <input type="hidden" id="editEmpId"/>
-          <label>Employee ID (auto if blank)</label>
-          <input type="text" id="fEmpId" placeholder="EMP-002"/>
-          <label>Full Name *</label>
-          <input type="text" id="fName" placeholder="Rahul Kumar"/>
-          <label>Password *</label>
-          <input type="password" id="fPassword" placeholder="Set login password"/>
-          <label>Phone</label>
-          <input type="tel" id="fPhone" placeholder="+91 98765 43210"/>
-          <label>Department</label>
-          <input type="text" id="fDept" placeholder="Production"/>
-          <label>Designation</label>
-          <input type="text" id="fDesig" placeholder="Senior Worker"/>
-          <label>Joining Date</label>
-          <input type="date" id="fJoin"/>
-          <label>Basic Salary (Rs./month)</label>
-          <input type="number" id="fSalary" placeholder="15000"/>
-          <label>OT Rate (Rs./hour)</label>
-          <input type="number" id="fOT" placeholder="50"/>
-          <label>Telegram User ID (optional)</label>
-          <input type="text" id="fTgId" placeholder="123456789"/>
+          <label>Employee ID (auto if blank)</label><input type="text" id="fEmpId" placeholder="EMP-002"/>
+          <label>Full Name *</label><input type="text" id="fName" placeholder="Rahul Kumar"/>
+          <label>Password *</label><input type="password" id="fPassword" placeholder="Set login password"/>
+          <label>Phone</label><input type="tel" id="fPhone" placeholder="+91 98765 43210"/>
+          <label>Department</label><input type="text" id="fDept" placeholder="Production"/>
+          <label>Designation</label><input type="text" id="fDesig" placeholder="Senior Worker"/>
+          <label>Joining Date</label><input type="date" id="fJoin"/>
+          <label>Basic Salary (Rs./month)</label><input type="number" id="fSalary" placeholder="15000"/>
+          <label>OT Rate (Rs./hour)</label><input type="number" id="fOT" placeholder="50"/>
+          <label>Telegram User ID (optional)</label><input type="text" id="fTgId" placeholder="123456789"/>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
           <button class="mgr-btn-primary" onclick="saveEmployee()">Save</button>
@@ -443,8 +334,6 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         </div>
       </div>
     </div>
-
-    <!-- ATTENDANCE -->
     <div class="mgr-section" id="mgr-attendance">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <input type="date" id="attDate" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none"/>
@@ -452,70 +341,47 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
       </div>
       <div id="attTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select date to view</p></div>
     </div>
-
-    <!-- SALARY -->
     <div class="mgr-section" id="mgr-salary">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <select id="salMonth" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none">
-          <option value="1">January</option><option value="2">February</option>
-          <option value="3">March</option><option value="4">April</option>
-          <option value="5">May</option><option value="6">June</option>
-          <option value="7">July</option><option value="8">August</option>
-          <option value="9">September</option><option value="10">October</option>
-          <option value="11">November</option><option value="12">December</option>
+          <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select>
         <input type="number" id="salYear" value="2026" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;width:90px"/>
         <button class="mgr-btn-primary" onclick="loadSalAll()" style="margin-top:0">View</button>
       </div>
       <div id="salTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select month to view</p></div>
     </div>
-
-    <!-- SETTINGS -->
     <div class="mgr-section" id="mgr-settings">
       <div class="card">
         <div class="card-title">System Settings</div>
         <div class="mgr-form">
-          <label>Company Name</label>
-          <input type="text" id="sCompany" placeholder="ABC Company"/>
-          <label>Office Latitude</label>
-          <input type="text" id="sLat" placeholder="28.736902439356445"/>
-          <label>Office Longitude</label>
-          <input type="text" id="sLng" placeholder="77.78588277523593"/>
-          <label>Attendance Radius (meters)</label>
-          <input type="number" id="sRadius" placeholder="70000"/>
-          <label>Normal OT Rate (Rs./hour)</label>
-          <input type="number" id="sOTRate" placeholder="50"/>
-          <label>Early OT Cutoff (HH:MM)</label>
-          <input type="text" id="sEarlyOT" placeholder="09:30"/>
-          <label>Normal Check-in End (HH:MM)</label>
-          <input type="text" id="sNormalEnd" placeholder="10:05"/>
-          <label>Manager Zone End (HH:MM)</label>
-          <input type="text" id="sMgrEnd" placeholder="10:30"/>
-          <label>Cooling Period Start (HH:MM)</label>
-          <input type="text" id="sCoolStart" placeholder="17:50"/>
-          <label>Cooling Period End (HH:MM)</label>
-          <input type="text" id="sCoolEnd" placeholder="18:10"/>
+          <label>Company Name</label><input type="text" id="sCompany" placeholder="ABC Company"/>
+          <label>Office Latitude</label><input type="text" id="sLat" placeholder="28.6139"/>
+          <label>Office Longitude</label><input type="text" id="sLng" placeholder="77.2090"/>
+          <label>Attendance Radius (meters)</label><input type="number" id="sRadius" placeholder="100"/>
+          <label>Normal OT Rate (Rs./hour)</label><input type="number" id="sOTRate" placeholder="50"/>
+          <label>Early OT Cutoff (HH:MM)</label><input type="text" id="sEarlyOT" placeholder="09:30"/>
+          <label>Normal Check-in End (HH:MM)</label><input type="text" id="sNormalEnd" placeholder="10:05"/>
+          <label>Manager Zone End (HH:MM)</label><input type="text" id="sMgrEnd" placeholder="10:30"/>
+          <label>Cooling Period Start (HH:MM)</label><input type="text" id="sCoolStart" placeholder="17:50"/>
+          <label>Cooling Period End (HH:MM)</label><input type="text" id="sCoolEnd" placeholder="18:10"/>
         </div>
         <button class="mgr-btn-primary" onclick="saveSettings()">Save Settings</button>
       </div>
-
       <div class="card">
         <div class="card-title">Change Manager Password</div>
         <div class="mgr-form">
-          <label>New Password</label>
-          <input type="password" id="sNewPwd" placeholder="New password"/>
-          <label>Confirm Password</label>
-          <input type="password" id="sConfPwd" placeholder="Confirm password"/>
+          <label>New Password</label><input type="password" id="sNewPwd" placeholder="New password"/>
+          <label>Confirm Password</label><input type="password" id="sConfPwd" placeholder="Confirm password"/>
         </div>
         <button class="mgr-btn-primary" onclick="changeMgrPwd()">Change Password</button>
         <div id="settingsMsg" style="margin-top:10px;font-size:13px;color:var(--green)"></div>
       </div>
     </div>
-
   </div>
 </div>
-
-<!-- SELFIE MODAL -->
 <div class="modal-overlay" id="selfieModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('selfieModal')">✕</button>
@@ -536,111 +402,70 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     </div>
   </div>
 </div>
-
-<!-- SUCCESS MODAL -->
 <div class="modal-overlay" id="successModal">
   <div class="modal"><div id="successContent" style="text-align:center;padding:20px 0"></div></div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
-// ═══════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════
 let EMP=null;
 let istH=0,istM=0,istS=0,istDay=0,istDt=1,istMon=0,istYr=2026;
 let serverUTC=null,receivedAt=null,isServer=false;
 let locOK=false,locLat=null,locLng=null;
+let officeLat=28.6139,officeLng=77.2090,officeRadius=50000;
 let zone=null,stream=null,photo=null;
 let checkedIn=false;
 let todayRec={checkin:null,checkout:null,earlyOT:0,lateOT:0,workMins:0,earning:0};
 let countdownTimer=null;
 
-// ═══════════════════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════════════════
 function showMgrLogin(){
   document.getElementById("loginWrap").style.display="none";
   document.getElementById("mgrLoginWrap").style.display="flex";
   document.getElementById("mgrPwd").focus();
 }
-
 function backToLogin(){
   document.getElementById("mgrLoginWrap").style.display="none";
   document.getElementById("loginWrap").style.display="flex";
   document.getElementById("mgrLoginErr").textContent="";
 }
-
 async function doLogin(){
-  const id  = document.getElementById("loginId").value.trim().toUpperCase();
-  const pwd = document.getElementById("loginPwd").value.trim();
-  const err = document.getElementById("loginErr");
-  const btn = document.getElementById("loginBtn");
+  const id=document.getElementById("loginId").value.trim().toUpperCase();
+  const pwd=document.getElementById("loginPwd").value.trim();
+  const err=document.getElementById("loginErr");
+  const btn=document.getElementById("loginBtn");
   err.textContent="";
   if(!id||!pwd){err.textContent="Employee ID and password required!";return;}
   btn.textContent="Loading...";btn.disabled=true;
   try{
-    const res  = await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:id,password:pwd})});
-    const data = await res.json();
+    const res=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:id,password:pwd})});
+    const data=await res.json();
     if(!data.success) throw new Error(data.error||"Login failed");
-    EMP = {
-      id:     data.employee.employee_id,
-      naam:   data.employee.name,
-      phone:  data.employee.phone||"",
-      dept:   data.employee.department||"",
-      desig:  data.employee.designation||"",
-      joined: data.employee.joining_date||"",
-      basic:  parseFloat(data.employee.basic_salary)||15000,
-      otRate: parseFloat(data.employee.ot_rate_per_hour)||50,
-      tgId:   data.employee.telegram_user_id,
-    };
-    // Check today's attendance
-    const ta = data.today_attendance;
+    EMP={id:data.employee.employee_id,naam:data.employee.name,phone:data.employee.phone||"",dept:data.employee.department||"",desig:data.employee.designation||"",joined:data.employee.joining_date||"",basic:parseFloat(data.employee.basic_salary)||15000,otRate:parseFloat(data.employee.ot_rate_per_hour)||50,tgId:data.employee.telegram_user_id};
+    const ta=data.today_attendance;
     if(ta){
-      if(ta.checkin_time && !ta.checkout_time){
-        checkedIn=true;
-        todayRec.checkin=ta.checkin_time;
-        document.getElementById("recIn").textContent=ta.checkin_time;
-      } else if(ta.checkin_time && ta.checkout_time){
-        checkedIn=false;
-        todayRec.checkin=ta.checkin_time;
-        todayRec.checkout=ta.checkout_time;
-        document.getElementById("recIn").textContent=ta.checkin_time;
-        document.getElementById("recOut").textContent=ta.checkout_time;
-        const wh=parseFloat(ta.working_hours||0);
-        document.getElementById("recHrs").textContent=wh?fmtHrs(wh):"—";
-      }
+      if(ta.checkin_time&&!ta.checkout_time){checkedIn=true;todayRec.checkin=ta.checkin_time;document.getElementById("recIn").textContent=ta.checkin_time;}
+      else if(ta.checkin_time&&ta.checkout_time){checkedIn=false;todayRec.checkin=ta.checkin_time;todayRec.checkout=ta.checkout_time;document.getElementById("recIn").textContent=ta.checkin_time;document.getElementById("recOut").textContent=ta.checkout_time;const wh=parseFloat(ta.working_hours||0);document.getElementById("recHrs").textContent=wh?fmtHrs(wh):"—";}
     }
     document.getElementById("loginWrap").style.display="none";
     document.getElementById("empApp").style.display="block";
     initApp();
-  }catch(e){
-    err.textContent=e.message;
-    btn.textContent="Login →";btn.disabled=false;
-  }
+  }catch(e){err.textContent=e.message;btn.textContent="Login →";btn.disabled=false;}
 }
-
 async function doMgrLogin(){
-  const pwd = document.getElementById("mgrPwd").value.trim();
-  const err = document.getElementById("mgrLoginErr");
-  const btn = document.getElementById("mgrLoginBtn");
+  const pwd=document.getElementById("mgrPwd").value.trim();
+  const err=document.getElementById("mgrLoginErr");
+  const btn=document.getElementById("mgrLoginBtn");
   err.textContent="";
   if(!pwd){err.textContent="Password required!";return;}
   btn.textContent="Loading...";btn.disabled=true;
   try{
-    const res  = await fetch("/api/manager-login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pwd})});
-    const data = await res.json();
+    const res=await fetch("/api/manager-login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pwd})});
+    const data=await res.json();
     if(!data.success) throw new Error(data.error||"Wrong password");
     document.getElementById("mgrLoginWrap").style.display="none";
     document.getElementById("mgrApp").style.display="block";
     initMgr();
-  }catch(e){
-    err.textContent=e.message;
-    btn.textContent="Login →";btn.disabled=false;
-  }
+  }catch(e){err.textContent=e.message;btn.textContent="Login →";btn.disabled=false;}
 }
-
 function doLogout(){
   EMP=null;checkedIn=false;
   todayRec={checkin:null,checkout:null,earlyOT:0,lateOT:0,workMins:0,earning:0};
@@ -652,14 +477,12 @@ function doLogout(){
   document.getElementById("loginErr").textContent="";
   document.getElementById("loginBtn").textContent="Login →";
   document.getElementById("loginBtn").disabled=false;
-  // Reset fields
   document.getElementById("recIn").textContent="—";
   document.getElementById("recOut").textContent="—";
   document.getElementById("recHrs").textContent="—";
   document.getElementById("recOT").textContent="—";
   document.getElementById("recEarn").textContent="—";
 }
-
 function doMgrLogout(){
   document.getElementById("mgrApp").style.display="none";
   document.getElementById("loginWrap").style.display="flex";
@@ -667,23 +490,27 @@ function doMgrLogout(){
   document.getElementById("mgrLoginBtn").textContent="Login →";
   document.getElementById("mgrLoginBtn").disabled=false;
 }
-
-// ═══════════════════════════════════════════════
-// EMPLOYEE APP INIT
-// ═══════════════════════════════════════════════
 function initApp(){
   const ini=EMP.naam.split(" ").map(w=>w[0]).join("").substring(0,2);
   ["empAv","profAv"].forEach(id=>{document.getElementById(id).textContent=ini;});
-  document.getElementById("empName").textContent  = EMP.naam;
-  document.getElementById("empId").textContent    = EMP.id;
-  document.getElementById("empDept").textContent  = EMP.dept+" • "+EMP.desig;
-  document.getElementById("profName").textContent = EMP.naam;
-  document.getElementById("profId").textContent   = EMP.id;
-  document.getElementById("profDept").textContent = EMP.dept;
-  document.getElementById("profPhone").textContent= EMP.phone||"—";
-  document.getElementById("profSal").textContent  = "₹"+Number(EMP.basic).toLocaleString()+"/month";
-  document.getElementById("profOT").textContent   = "₹"+EMP.otRate+"/hour";
-  document.getElementById("profJoin").textContent = EMP.joined||"—";
+  document.getElementById("empName").textContent=EMP.naam;
+  document.getElementById("empId").textContent=EMP.id;
+  document.getElementById("empDept").textContent=EMP.dept+" • "+EMP.desig;
+  document.getElementById("profName").textContent=EMP.naam;
+  document.getElementById("profId").textContent=EMP.id;
+  document.getElementById("profDept").textContent=EMP.dept;
+  document.getElementById("profPhone").textContent=EMP.phone||"—";
+  document.getElementById("profSal").textContent="₹"+Number(EMP.basic).toLocaleString()+"/month";
+  document.getElementById("profOT").textContent="₹"+EMP.otRate+"/hour";
+  document.getElementById("profJoin").textContent=EMP.joined||"—";
+
+  fetch("/api/settings").then(r=>r.json()).then(d=>{
+    const s=d.settings||{};
+    if(s.office_lat)    officeLat    = parseFloat(s.office_lat);
+    if(s.office_lng)    officeLng    = parseFloat(s.office_lng);
+    if(s.radius_meters) officeRadius = parseFloat(s.radius_meters);
+  }).catch(()=>{});
+
   syncDeviceTime();
   fetchServerTime();
   setInterval(tick,1000);
@@ -691,10 +518,6 @@ function initApp(){
   loadHistory();
   updateBtn();
 }
-
-// ═══════════════════════════════════════════════
-// TIME
-// ═══════════════════════════════════════════════
 function syncDeviceTime(){
   const ist=new Date(Date.now()+5.5*60*60*1000);
   istH=ist.getUTCHours();istM=ist.getUTCMinutes();istS=ist.getUTCSeconds();
@@ -705,7 +528,6 @@ function syncDeviceTime(){
   document.getElementById("timeBadge").textContent="Device Time";
   updateZone();updateBtn();
 }
-
 async function fetchServerTime(){
   try{
     const ctrl=new AbortController();
@@ -723,7 +545,6 @@ async function fetchServerTime(){
     updateZone();updateBtn();
   }catch(e){setTimeout(fetchServerTime,30000);}
 }
-
 function tick(){
   if(!serverUTC||!receivedAt)return;
   const elapsed=Date.now()-receivedAt;
@@ -737,14 +558,9 @@ function tick(){
   document.getElementById("dateDisp").textContent=`${DAYS[istDay]}, ${istDt} ${MONS[istMon]} ${istYr}`;
   updateZone();updateBtn();
 }
-
 function pad(n){return String(n).padStart(2,"0")}
 function toMins(t){const[h,m]=t.split(":").map(Number);return h*60+m}
 function nowMins(){return istH*60+istM}
-
-// ═══════════════════════════════════════════════
-// ZONE
-// ═══════════════════════════════════════════════
 const ZONES={
   early_ot:{cls:"z-early",icon:"🌅",name:"Early OT Zone",desc:"Before 9:30 AM — OT from arrival to 10:00 AM 💰"},
   normal:{cls:"z-normal",icon:"✅",name:"Normal Check-in",desc:"On time — check in now"},
@@ -755,7 +571,6 @@ const ZONES={
   late_ot:{cls:"z-ot",icon:"💰",name:"OT Zone",desc:"OT from 6:00 PM 💰"},
   unknown:{cls:"z-unknown",icon:"⏳",name:"Loading...",desc:"Fetching time"},
 };
-
 function getZone(){
   const now=nowMins();
   if(!checkedIn){
@@ -769,7 +584,6 @@ function getZone(){
     return"late_ot";
   }
 }
-
 function updateZone(){
   zone=getZone();
   const z=ZONES[zone]||ZONES.unknown;
@@ -779,17 +593,13 @@ function updateZone(){
   document.getElementById("zoneName").textContent=z.name;
   document.getElementById("zoneDesc").textContent=z.desc;
 }
-
-// ═══════════════════════════════════════════════
-// GPS
-// ═══════════════════════════════════════════════
 function watchGPS(){
   if(!navigator.geolocation){setPill("pillLoc","p-err","locTxt","Not supported");return;}
   navigator.geolocation.watchPosition(
     pos=>{
       locLat=pos.coords.latitude;locLng=pos.coords.longitude;
-      const d=getDist(locLat,locLng,28.6139,77.2090);
-      locOK=d<=50000; // Using large radius for now — will use settings later
+      const d=getDist(locLat,locLng,officeLat,officeLng);
+      locOK=d<=officeRadius;
       setPill("pillLoc",locOK?"p-ok":"p-err","locTxt",`${locOK?"✓":"✗"} ${Math.round(d)}m`);
       updateBtn();
     },
@@ -797,59 +607,41 @@ function watchGPS(){
     {enableHighAccuracy:true,maximumAge:10000}
   );
 }
-
 function getDist(la1,lo1,la2,lo2){
   const R=6371000,dL=(la2-la1)*Math.PI/180,dl=(lo2-lo1)*Math.PI/180;
   const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dl/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-
 function setPill(pid,cls,vid,val){
   document.getElementById(pid).className="pill "+cls;
   document.getElementById(vid).textContent=val;
 }
-
-// ═══════════════════════════════════════════════
-// ACTION BUTTON
-// ═══════════════════════════════════════════════
 function updateBtn(){
   const btn=document.getElementById("actionBtn");
   const ico=document.getElementById("btnIcon");
   const txt=document.getElementById("btnTxt");
   const bdg=document.getElementById("empBadge");
-
   if(!checkedIn){
     bdg.className="emp-badge b-absent";bdg.textContent="Absent";
-    if(todayRec.checkout){
-      btn.className="action-btn btn-off";ico.textContent="✅";txt.textContent="Day Complete!";return;
-    }
-    if(!locOK){
-      btn.className="action-btn btn-off";ico.textContent="📍";txt.textContent="Go Inside Office First";return;
-    }
+    if(todayRec.checkout){btn.className="action-btn btn-off";ico.textContent="✅";txt.textContent="Day Complete!";return;}
+    if(!locOK){btn.className="action-btn btn-off";ico.textContent="📍";txt.textContent="Go Inside Office First";return;}
     btn.className="action-btn btn-in";ico.textContent="✅";
     const msgs={early_ot:"Check In (Early OT 💰)",mgr:"Check In (Manager Approval)",late:"Check In (Deduction!)",normal:"Check In"};
     txt.textContent=msgs[zone]||"Check In";
   }else{
     bdg.className="emp-badge b-present";bdg.textContent="Present";
-    if(!locOK){
-      btn.className="action-btn btn-off";ico.textContent="📍";txt.textContent="Stay Inside Office";return;
-    }
+    if(!locOK){btn.className="action-btn btn-off";ico.textContent="📍";txt.textContent="Stay Inside Office";return;}
     btn.className="action-btn btn-out";ico.textContent="🚪";
     const msgs={cooling:"Check Out (Cooling ✅)",late_ot:"Check Out (OT 💰)",early_exit:"Check Out (Deduction!)"};
     txt.textContent=msgs[zone]||"Check Out";
   }
 }
-
-// ═══════════════════════════════════════════════
-// CAMERA + ACTION
-// ═══════════════════════════════════════════════
 function startAction(){
   if(!locOK){showToast("📍 Go inside office first!","err");return;}
   if(!checkedIn&&todayRec.checkout){showToast("Day already complete!","err");return;}
   document.getElementById("selfieTitle").textContent=checkedIn?"📸 Check-out Selfie":"📸 Check-in Selfie";
   openModal("selfieModal");startCam();
 }
-
 async function startCam(){
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:1280,height:720},audio:false});
@@ -858,9 +650,7 @@ async function startCam(){
     document.getElementById("selfiePreview").style.display="none";
   }catch(e){showToast("Allow camera!","err");closeModal("selfieModal");}
 }
-
 function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
-
 function capturePhoto(){
   const v=document.getElementById("selfieVid");
   const c=document.getElementById("selfieCvs");
@@ -873,26 +663,14 @@ function capturePhoto(){
   document.getElementById("selfiePreview").style.display="block";
   stopCam();
 }
-
-function retakePhoto(){
-  photo=null;
-  document.getElementById("selfieBox").style.display="block";
-  document.getElementById("selfiePreview").style.display="none";
-  startCam();
-}
-
+function retakePhoto(){photo=null;document.getElementById("selfieBox").style.display="block";document.getElementById("selfiePreview").style.display="none";startCam();}
 function confirmPhoto(){closeModal("selfieModal");stopCam();checkedIn?doCheckout():doCheckin();}
-
-// ═══════════════════════════════════════════════
-// CHECK-IN
-// ═══════════════════════════════════════════════
 async function doCheckin(){
   const btn=document.getElementById("actionBtn");
   btn.className="action-btn btn-off";
   document.getElementById("btnTxt").textContent="Saving...";
   try{
-    const res=await fetch("/api/checkin",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({telegram_user_id:EMP.tgId,location_lat:locLat,location_lng:locLng,selfie_base64:photo||""})});
+    const res=await fetch("/api/checkin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telegram_user_id:EMP.tgId,location_lat:locLat,location_lng:locLng,selfie_base64:photo||""})});
     const d=await res.json();
     if(!d.success)throw new Error(d.error||"Check-in failed");
     todayRec.checkin=d.time;
@@ -900,30 +678,16 @@ async function doCheckin(){
     checkedIn=true;
     document.getElementById("recIn").textContent=d.time;
     updateZone();
-
-    const det=
-      d.zone==="early_ot"?`✅ Checked in at ${d.time}\n💰 Early OT until 10:00 AM`:
-      d.zone==="manager_zone"?`✅ Checked in at ${d.time}\n⚠️ Pending manager approval`:
-      d.zone==="late_deduct"?`✅ Checked in at ${d.time}\n❌ Deduction applies`:
-      `✅ Checked in at ${d.time}\n🟢 On time!`;
-
+    const det=d.zone==="early_ot"?`✅ Checked in at ${d.time}\n💰 Early OT until 10:00 AM`:d.zone==="manager_zone"?`✅ Checked in at ${d.time}\n⚠️ Pending manager approval`:d.zone==="late_deduct"?`✅ Checked in at ${d.time}\n❌ Deduction applies`:`✅ Checked in at ${d.time}\n🟢 On time!`;
     showSuccessWithLogout("✅","Check-in Successful!",d.time,det);
-  }catch(e){
-    showToast("❌ "+e.message,"err");
-    updateBtn();
-  }
+  }catch(e){showToast("❌ "+e.message,"err");updateBtn();}
 }
-
-// ═══════════════════════════════════════════════
-// CHECK-OUT
-// ═══════════════════════════════════════════════
 async function doCheckout(){
   const btn=document.getElementById("actionBtn");
   btn.className="action-btn btn-off";
   document.getElementById("btnTxt").textContent="Saving...";
   try{
-    const res=await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({telegram_user_id:EMP.tgId,selfie_base64:photo||""})});
+    const res=await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telegram_user_id:EMP.tgId,selfie_base64:photo||""})});
     const d=await res.json();
     if(!d.success)throw new Error(d.error||"Check-out failed");
     const wm=Math.round((d.working_hours||0)*60);
@@ -934,19 +698,11 @@ async function doCheckout(){
     document.getElementById("recOT").textContent=om>0?fmtMins(om):"—";
     document.getElementById("recEarn").textContent=d.today_earning?"₹"+d.today_earning:"—";
     checkedIn=false;updateZone();
-
     const ms=d.month_summary||{};
     const det=`⏱ Working: ${fmtMins(wm)}\n🕐 OT: ${fmtMins(om)}\n💰 Today: ₹${d.today_earning}`;
     showSuccessWithLogout("🚪","Checked Out!",d.checkout_time,det);
-  }catch(e){
-    showToast("❌ "+e.message,"err");
-    updateBtn();
-  }
+  }catch(e){showToast("❌ "+e.message,"err");updateBtn();}
 }
-
-// ═══════════════════════════════════════════════
-// AUTO LOGOUT AFTER ACTION
-// ═══════════════════════════════════════════════
 function showSuccessWithLogout(icon,title,time,det){
   let count=5;
   document.getElementById("successContent").innerHTML=`
@@ -964,30 +720,15 @@ function showSuccessWithLogout(icon,title,time,det){
       🚪 Logout Now (Next Employee)
     </button>`;
   openModal("successModal");
-
   if(countdownTimer)clearInterval(countdownTimer);
   countdownTimer=setInterval(()=>{
     count--;
     const el=document.getElementById("countNum");
     if(el)el.textContent=count;
-    if(count<=0){
-      clearInterval(countdownTimer);
-      countdownTimer=null;
-      closeModal("successModal");
-      doLogout();
-    }
+    if(count<=0){clearInterval(countdownTimer);countdownTimer=null;closeModal("successModal");doLogout();}
   },1000);
 }
-
-function manualLogout(){
-  if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
-  closeModal("successModal");
-  doLogout();
-}
-
-// ═══════════════════════════════════════════════
-// HISTORY
-// ═══════════════════════════════════════════════
+function manualLogout(){if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}closeModal("successModal");doLogout();}
 async function loadHistory(){
   if(!EMP)return;
   const now=new Date(Date.now()+5.5*60*60*1000);
@@ -996,7 +737,6 @@ async function loadHistory(){
   const mName=MONS[now.getUTCMonth()]+" "+year;
   document.getElementById("histTitle").textContent="This Month ("+mName+")";
   document.getElementById("salMonth").textContent=mName;
-
   try{
     const [a,s]=await Promise.all([
       fetch("/api/attendance?employee_id="+EMP.id).then(r=>r.json()),
@@ -1020,9 +760,7 @@ async function loadHistory(){
             <div class="h-status" style="color:${ok?"var(--green)":"var(--red)"}">${ok?"✅ Present":"❌ Absent"}</div>
             <div class="h-times">${r.checkin_time||"—"} – ${r.checkout_time||"—"}</div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:14px;font-weight:700;color:var(--green)">${ok?wh:"—"}</div>
-          </div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--green)">${ok?wh:"—"}</div></div>
         </div>`;
       });
       document.getElementById("histList").innerHTML=html;
@@ -1038,10 +776,6 @@ async function loadHistory(){
     document.getElementById("histList").innerHTML=`<p style="color:var(--red);text-align:center;padding:20px">❌ ${e.message}</p>`;
   }
 }
-
-// ═══════════════════════════════════════════════
-// MANAGER DASHBOARD
-// ═══════════════════════════════════════════════
 function initMgr(){
   const ist=new Date(Date.now()+5.5*60*60*1000);
   const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -1049,22 +783,17 @@ function initMgr(){
   document.getElementById("mgrDate").textContent=`${DAYS[ist.getUTCDay()]}, ${ist.getUTCDate()} ${MONS[ist.getUTCMonth()]} ${ist.getUTCFullYear()}`;
   loadOverview();
   loadEmployees();
-  // Set default date
   document.getElementById("attDate").value=ist.toISOString().split("T")[0];
-  // Set salary month
   document.getElementById("salMonth").value=String(ist.getUTCMonth()+1);
   document.getElementById("salYear").value=String(ist.getUTCFullYear());
   loadSettings();
 }
-
 function showMgrSection(s){
   document.querySelectorAll(".mgr-section").forEach(el=>el.classList.remove("active"));
   document.querySelectorAll(".mgr-tab").forEach(el=>el.classList.remove("active"));
   document.getElementById("mgr-"+s).classList.add("active");
   event.target.classList.add("active");
 }
-
-// OVERVIEW
 async function loadOverview(){
   try{
     const ist=new Date(Date.now()+5.5*60*60*1000);
@@ -1077,75 +806,42 @@ async function loadOverview(){
     const absent=att.absent||[];
     const late=present.filter(a=>a.checkin_status==="late_deduct"||a.checkin_status==="manager_zone");
     const total=(emps.employees||[]).length;
-
     document.getElementById("ovPresent").textContent=present.length;
     document.getElementById("ovAbsent").textContent=absent.length;
     document.getElementById("ovLate").textContent=late.length;
     document.getElementById("ovTotal").textContent=total;
-
-    let html=`<div style="overflow-x:auto"><table class="mgr-table">
-      <tr><th>Employee</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr>`;
+    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Employee</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr>`;
     [...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(r=>{
       const ok=r.status==="present";
-      html+=`<tr>
-        <td><b>${r.name||r.employee_id}</b></td>
-        <td>${r.department||"—"}</td>
-        <td>${r.checkin_time||"—"}</td>
-        <td>${r.checkout_time||"—"}</td>
-        <td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td>
-      </tr>`;
+      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("ovTable").innerHTML=html;
-  }catch(e){
-    document.getElementById("ovTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;
-  }
+  }catch(e){document.getElementById("ovTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
 }
-
-// EMPLOYEES
 async function loadEmployees(){
   try{
     const res=await fetch("/api/employees");
     const d=await res.json();
     const emps=d.employees||[];
     if(!emps.length){document.getElementById("empTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>No employees</p>";return;}
-    let html=`<div style="overflow-x:auto"><table class="mgr-table">
-      <tr><th>ID</th><th>Name</th><th>Department</th><th>Basic</th><th>OT/hr</th><th>Status</th><th>Actions</th></tr>`;
+    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>ID</th><th>Name</th><th>Department</th><th>Basic</th><th>OT/hr</th><th>Status</th><th>Actions</th></tr>`;
     emps.forEach(e=>{
-      html+=`<tr>
-        <td>${e.employee_id}</td>
-        <td><b>${e.name}</b></td>
-        <td>${e.department||"—"}</td>
-        <td>₹${Number(e.basic_salary||0).toLocaleString()}</td>
-        <td>₹${e.ot_rate_per_hour||50}</td>
-        <td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td>
-        <td>
-          <button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button>
-          &nbsp;
-          <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button>
-        </td>
-      </tr>`;
+      html+=`<tr><td>${e.employee_id}</td><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>₹${Number(e.basic_salary||0).toLocaleString()}</td><td>₹${e.ot_rate_per_hour||50}</td><td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td><td><button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button> <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("empTable").innerHTML=html;
-  }catch(e){
-    document.getElementById("empTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;
-  }
+  }catch(e){document.getElementById("empTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
 }
-
 function showAddEmp(){
   document.getElementById("addEmpTitle").textContent="Add New Employee";
   document.getElementById("addEmpForm").style.display="block";
   document.getElementById("editEmpId").value="";
-  ["fEmpId","fName","fPassword","fPhone","fDept","fDesig","fJoin","fSalary","fOT","fTgId"].forEach(id=>{
-    document.getElementById(id).value="";
-  });
+  ["fEmpId","fName","fPassword","fPhone","fDept","fDesig","fJoin","fTgId"].forEach(id=>{document.getElementById(id).value="";});
   document.getElementById("fSalary").value="15000";
   document.getElementById("fOT").value="50";
 }
-
 function hideAddEmp(){document.getElementById("addEmpForm").style.display="none";}
-
 async function editEmp(id){
   try{
     const res=await fetch("/api/employees?id="+id);
@@ -1166,48 +862,21 @@ async function editEmp(id){
     document.getElementById("fTgId").value=e.telegram_user_id||"";
   }catch(e){showToast("Error: "+e.message,"err");}
 }
-
 async function saveEmployee(){
   const editId=document.getElementById("editEmpId").value;
-  const empId =document.getElementById("fEmpId").value.trim().toUpperCase()||("EMP-"+Date.now().toString().slice(-3));
-  const name  =document.getElementById("fName").value.trim();
-  const pwd   =document.getElementById("fPassword").value.trim();
+  const empId=document.getElementById("fEmpId").value.trim().toUpperCase()||("EMP-"+Date.now().toString().slice(-3));
+  const name=document.getElementById("fName").value.trim();
+  const pwd=document.getElementById("fPassword").value.trim();
   if(!name){showToast("Name required!","err");return;}
-
   try{
     if(editId){
-      // Update
-      const body={
-        employee_id:editId,
-        telegram_user_id:document.getElementById("fTgId").value.trim()||null,
-        name,phone:document.getElementById("fPhone").value.trim(),
-        department:document.getElementById("fDept").value.trim(),
-        designation:document.getElementById("fDesig").value.trim(),
-        basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,
-        ot_rate_per_hour:parseFloat(document.getElementById("fOT").value)||50,
-        status:"active",
-      };
+      const body={employee_id:editId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:parseFloat(document.getElementById("fOT").value)||50,status:"active"};
       await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      // Update password if provided
-      if(pwd){
-        await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({...body,password:pwd})});
-      }
+      if(pwd){await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body,password:pwd})});}
       showToast("Employee updated!","ok");
     }else{
-      // Add new
       if(!pwd){showToast("Password required for new employee!","err");return;}
-      const body={
-        employee_id:empId,
-        telegram_user_id:document.getElementById("fTgId").value.trim()||null,
-        name,password:pwd,
-        phone:document.getElementById("fPhone").value.trim(),
-        department:document.getElementById("fDept").value.trim(),
-        designation:document.getElementById("fDesig").value.trim(),
-        joining_date:document.getElementById("fJoin").value,
-        basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,
-        ot_rate_per_hour:parseFloat(document.getElementById("fOT").value)||50,
-      };
+      const body={employee_id:empId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,password:pwd,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),joining_date:document.getElementById("fJoin").value,basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:parseFloat(document.getElementById("fOT").value)||50};
       await fetch("/api/employees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       showToast("Employee added!","ok");
     }
@@ -1215,7 +884,6 @@ async function saveEmployee(){
     loadEmployees();
   }catch(e){showToast("Error: "+e.message,"err");}
 }
-
 async function deactivateEmp(id,name){
   if(!confirm(`Deactivate ${name}?`))return;
   try{
@@ -1224,8 +892,6 @@ async function deactivateEmp(id,name){
     loadEmployees();
   }catch(e){showToast("Error: "+e.message,"err");}
 }
-
-// ATTENDANCE
 async function loadAttAll(){
   const date=document.getElementById("attDate").value;
   if(!date){showToast("Select a date!","err");return;}
@@ -1236,31 +902,16 @@ async function loadAttAll(){
     const present=d.attendance||[];
     const absent=d.absent||[];
     const all=[...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
-
-    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">
-      Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p>
-      <div style="overflow-x:auto"><table class="mgr-table">
-      <tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr>`;
+    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr>`;
     all.forEach(r=>{
       const ok=r.status==="present";
       const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
-      html+=`<tr>
-        <td><b>${r.name||r.employee_id}</b></td>
-        <td>${r.department||"—"}</td>
-        <td>${r.checkin_time||"—"}</td>
-        <td>${r.checkout_time||"—"}</td>
-        <td>${wh}</td>
-        <td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td>
-      </tr>`;
+      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
-  }catch(e){
-    document.getElementById("attTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;
-  }
+  }catch(e){document.getElementById("attTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
 }
-
-// SALARY
 async function loadSalAll(){
   const month=document.getElementById("salMonth").value;
   const year=document.getElementById("salYear").value;
@@ -1270,37 +921,18 @@ async function loadSalAll(){
     const d=await res.json();
     const emps=d.employees||[];
     let totalNet=0;
-    let html=`<div style="overflow-x:auto"><table class="mgr-table">
-      <tr><th>Name</th><th>Dept</th><th>Present</th><th>OT Hours</th><th>Basic</th><th>OT Amt</th><th>Deductions</th><th>Net Salary</th></tr>`;
+    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Present</th><th>OT Hours</th><th>Basic</th><th>OT Amt</th><th>Deductions</th><th>Net Salary</th></tr>`;
     emps.forEach(e=>{
       const net=parseFloat(e.net_salary||0);
       totalNet+=net;
       const ot=(parseFloat(e.early_ot_hours||0)+parseFloat(e.late_ot_hours||0)).toFixed(1);
-      html+=`<tr>
-        <td><b>${e.name}</b></td>
-        <td>${e.department||"—"}</td>
-        <td>${e.total_present||0}</td>
-        <td>${ot}h</td>
-        <td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td>
-        <td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td>
-        <td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td>
-        <td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td>
-      </tr>`;
+      html+=`<tr><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>${e.total_present||0}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td></tr>`;
     });
-    html+=`<tr style="background:var(--gray);font-weight:700">
-      <td colspan="7">Total Salary Payable</td>
-      <td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td>
-    </tr>`;
+    html+=`<tr style="background:var(--gray);font-weight:700"><td colspan="7">Total Salary Payable</td><td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td></tr>`;
     html+="</table></div>";
     document.getElementById("salTable").innerHTML=html;
-  }catch(e){
-    document.getElementById("salTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;
-  }
+  }catch(e){document.getElementById("salTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
 }
-
-// S
-
-  // SETTINGS
 async function loadSettings(){
   try{
     const res=await fetch("/api/settings");
@@ -1309,51 +941,53 @@ async function loadSettings(){
     document.getElementById("sCompany").value=s.company_name||"";
     document.getElementById("sLat").value=s.office_lat||"";
     document.getElementById("sLng").value=s.office_lng||"";
-    document.getElementById("sRadius").value=s.attendance_radius||100;
-    document.getElementById("sOTRate").value=s.ot_rate||50;
+    document.getElementById("sRadius").value=s.radius_meters||100;
+    document.getElementById("sOTRate").value=s.normal_ot_rate||50;
     document.getElementById("sEarlyOT").value=s.early_ot_cutoff||"09:30";
     document.getElementById("sNormalEnd").value=s.normal_end||"10:05";
-    document.getElementById("sMgrEnd").value=s.mgr_end||"10:30";
+    document.getElementById("sMgrEnd").value=s.manager_zone_end||"10:30";
     document.getElementById("sCoolStart").value=s.cooling_start||"17:50";
     document.getElementById("sCoolEnd").value=s.cooling_end||"18:10";
   }catch(e){}
 }
-
 async function saveSettings(){
   const body={
     company_name:document.getElementById("sCompany").value,
     office_lat:document.getElementById("sLat").value,
     office_lng:document.getElementById("sLng").value,
-    attendance_radius:document.getElementById("sRadius").value,
-    ot_rate:document.getElementById("sOTRate").value,
+    radius_meters:document.getElementById("sRadius").value,
+    normal_ot_rate:document.getElementById("sOTRate").value,
     early_ot_cutoff:document.getElementById("sEarlyOT").value,
     normal_end:document.getElementById("sNormalEnd").value,
-    mgr_end:document.getElementById("sMgrEnd").value,
+    manager_zone_end:document.getElementById("sMgrEnd").value,
     cooling_start:document.getElementById("sCoolStart").value,
     cooling_end:document.getElementById("sCoolEnd").value,
   };
   try{
-    await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     document.getElementById("settingsMsg").textContent="✅ Settings saved!";
+    document.getElementById("settingsMsg").style.color="var(--green)";
     setTimeout(()=>document.getElementById("settingsMsg").textContent="",3000);
+    // Update local vars immediately too
+    if(body.office_lat) officeLat=parseFloat(body.office_lat);
+    if(body.office_lng) officeLng=parseFloat(body.office_lng);
+    if(body.radius_meters) officeRadius=parseFloat(body.radius_meters);
   }catch(e){showToast("Error: "+e.message,"err");}
 }
-
 async function changeMgrPwd(){
   const np=document.getElementById("sNewPwd").value;
   const cp=document.getElementById("sConfPwd").value;
   if(!np){showToast("Enter new password!","err");return;}
   if(np!==cp){showToast("Passwords don't match!","err");return;}
   try{
-    await fetch("/api/manager-login",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({new_password:np})});
+    await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({manager_password:np})});
     document.getElementById("settingsMsg").textContent="✅ Password changed!";
+    document.getElementById("settingsMsg").style.color="var(--green)";
     document.getElementById("sNewPwd").value="";
     document.getElementById("sConfPwd").value="";
     setTimeout(()=>document.getElementById("settingsMsg").textContent="",3000);
   }catch(e){showToast("Error: "+e.message,"err");}
 }
-
-// HELPERS
 function showPage(p){
   document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(el=>el.classList.remove("active"));
@@ -1361,22 +995,20 @@ function showPage(p){
   document.getElementById("nav-"+p).classList.add("active");
   if(p==="history")loadHistory();
 }
-
 function openModal(id){document.getElementById(id).classList.add("show");}
 function closeModal(id){
   document.getElementById(id).classList.remove("show");
   if(id==="selfieModal")stopCam();
 }
-
 function showToast(msg,type=""){
   const t=document.getElementById("toast");
   t.textContent=msg;t.className="toast"+(type?" "+type:"");
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),3000);
 }
-
 function fmtHrs(h){return`${Math.floor(h)}h ${Math.round((h%1)*60)}m`;}
-function fmtMins(m){return`${Math.floor(m/60)}h ${m%60}m`;}
+function fmtMins(m){if(!m||m<=0)return"—";return`${Math.floor(m/60)}h ${m%60}m`;}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
