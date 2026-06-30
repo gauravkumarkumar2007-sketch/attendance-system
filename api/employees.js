@@ -53,15 +53,22 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "POST") {
       const b = req.body;
-      await dbQuery(`INSERT INTO employees(employee_id,telegram_user_id,name,phone,department,designation,joining_date,basic_salary,ot_rate_per_hour,status) VALUES(?,?,?,?,?,?,?,?,?,'active')`,
-        [b.employee_id,b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.joining_date,b.basic_salary||0,b.ot_rate_per_hour||50]);
+      await dbQuery(`INSERT INTO employees(employee_id,telegram_user_id,name,phone,department,designation,joining_date,basic_salary,ot_rate_per_hour,password,status) VALUES(?,?,?,?,?,?,?,?,?,?,'active')`,
+        [b.employee_id,b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.joining_date,b.basic_salary||0,b.ot_rate_per_hour||50,b.password||"1234"]);
       return res.status(200).json({ success: true, message: "Employee added!" });
     }
 
     if (req.method === "PUT") {
       const b = req.body;
-      await dbQuery(`UPDATE employees SET telegram_user_id=?,name=?,phone=?,department=?,designation=?,basic_salary=?,ot_rate_per_hour=?,status=? WHERE employee_id=?`,
-        [b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.basic_salary,b.ot_rate_per_hour,b.status||"active",b.employee_id]);
+      if (b.password) {
+        // Update including password
+        await dbQuery(`UPDATE employees SET telegram_user_id=?,name=?,phone=?,department=?,designation=?,basic_salary=?,ot_rate_per_hour=?,status=?,password=? WHERE employee_id=?`,
+          [b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.basic_salary,b.ot_rate_per_hour,b.status||"active",b.password,b.employee_id]);
+      } else {
+        // Update without touching password
+        await dbQuery(`UPDATE employees SET telegram_user_id=?,name=?,phone=?,department=?,designation=?,basic_salary=?,ot_rate_per_hour=?,status=? WHERE employee_id=?`,
+          [b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.basic_salary,b.ot_rate_per_hour,b.status||"active",b.employee_id]);
+      }
       return res.status(200).json({ success: true, message: "Employee updated!" });
     }
 
