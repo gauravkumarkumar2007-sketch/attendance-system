@@ -169,7 +169,7 @@ module.exports = async function handler(req, res) {
       [emp.employee_id, today, timeStr, earlyOT, isSun,
        isHol, otMul, zone, deduct,
        location_lat || null, location_lng || null,
-       selfie_base64.substring(0, 100)]
+       selfie_base64]
     );
 
     if (zone === "manager_zone") {
