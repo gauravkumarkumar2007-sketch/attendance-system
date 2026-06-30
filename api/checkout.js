@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST")    return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { telegram_user_id } = req.body;
+    const { telegram_user_id, selfie_base64 = "" } = req.body;
     if (!telegram_user_id) return res.status(400).json({ error: "Telegram ID required" });
 
     const emps = await dbQuery("SELECT * FROM employees WHERE telegram_user_id=? AND status='active'", [telegram_user_id]);
@@ -110,8 +110,8 @@ module.exports = async function handler(req, res) {
     const totalDeduct = lateDeduct + exitDeductAmt;
     const todayEarn   = Math.round((dailyRate + earlyOTAmt + lateOTAmt - totalDeduct) * 100) / 100;
 
-    await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=? WHERE employee_id=? AND date=?`,
-      [timeStr, Math.round(workMins/60*100)/100, Math.round(lateOT*100)/100, zone, emp.employee_id, today]);
+    await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=?,checkout_selfie_base64=? WHERE employee_id=? AND date=?`,
+      [timeStr, Math.round(workMins/60*100)/100, Math.round(lateOT*100)/100, zone, selfie_base64, emp.employee_id, today]);
 
     const month = new Date(Date.now()+5.5*60*60*1000).getUTCMonth()+1;
     const year  = new Date(Date.now()+5.5*60*60*1000).getUTCFullYear();
