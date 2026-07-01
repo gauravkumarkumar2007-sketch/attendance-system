@@ -359,12 +359,12 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     </div>
     <div class="mgr-section" id="mgr-salary">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-        <select id="salMonth" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none">
+        <select id="mgrSalMonth" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none">
           <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option>
           <option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option>
           <option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select>
-        <input type="number" id="salYear" value="2026" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;width:90px"/>
+        <input type="number" id="mgrSalYear" value="2026" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;width:90px"/>
         <button class="mgr-btn-primary" onclick="loadSalAll()" style="margin-top:0">View</button>
       </div>
       <div id="salTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select month to view</p></div>
@@ -818,8 +818,8 @@ function initMgr(){
   loadApprovals();
   loadDisputes();
   document.getElementById("attDate").value=ist.toISOString().split("T")[0];
-  document.getElementById("salMonth").value=String(ist.getUTCMonth()+1);
-  document.getElementById("salYear").value=String(ist.getUTCFullYear());
+  document.getElementById("mgrSalMonth").value=String(ist.getUTCMonth()+1);
+  document.getElementById("mgrSalYear").value=String(ist.getUTCFullYear());
   loadSettings();
 }
 function showMgrSection(s){
@@ -1046,8 +1046,8 @@ function viewPhotos(empId){
   openModal("successModal");
 }
 async function loadSalAll(){
-  const month=document.getElementById("salMonth").value;
-  const year=document.getElementById("salYear").value;
+  const month=document.getElementById("mgrSalMonth").value;
+  const year=document.getElementById("mgrSalYear").value;
   document.getElementById("salTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>Loading...</p>";
   try{
     const res=await fetch(`/api/salary-all?month=${month}&year=${year}`);
