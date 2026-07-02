@@ -76,6 +76,7 @@ module.exports = async function handler(req, res) {
     if (req.method==="PUT") {
       const b = req.body||{};
       if (!b.id) return res.status(400).json({error:"Dispute id required"});
+      b.id = parseInt(b.id); // ensure integer for SQLite
 
       const ist = new Date(Date.now()+5.5*60*60*1000);
       const h=ist.getUTCHours(), m=ist.getUTCMinutes();
