@@ -53,8 +53,11 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "POST") {
       const b = req.body;
+      // ot_rate_per_hour: null/blank means "auto-calculate from basic salary" (handled in checkin/checkout).
+      const otRate = (b.ot_rate_per_hour === undefined || b.ot_rate_per_hour === null || b.ot_rate_per_hour === "")
+        ? null : b.ot_rate_per_hour;
       await dbQuery(`INSERT INTO employees(employee_id,telegram_user_id,name,phone,department,designation,joining_date,basic_salary,ot_rate_per_hour,password,status) VALUES(?,?,?,?,?,?,?,?,?,?,'active')`,
-        [b.employee_id,b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.joining_date,b.basic_salary||0,b.ot_rate_per_hour||50,b.password||"1234"]);
+        [b.employee_id,b.telegram_user_id,b.name,b.phone,b.department,b.designation,b.joining_date,b.basic_salary||0,otRate,b.password||"1234"]);
       return res.status(200).json({ success: true, message: "Employee added!" });
     }
 
