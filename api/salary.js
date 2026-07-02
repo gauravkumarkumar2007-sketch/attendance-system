@@ -1,4 +1,5 @@
-// api/salary.js — Get monthly salary summary
+// api/salary.js — Personal salary summary (GET ?employee_id=) + Manager all-employee salary (GET without employee_id)
+// Merged from salary.js + salary-all.js to save a Vercel Serverless Function slot.
 const https = require("https");
 
 function dbQuery(sql, params = []) {
@@ -46,39 +47,69 @@ function dbQuery(sql, params = []) {
   });
 }
 
+// ── Personal: one employee's monthly summary (was salary.js) ──
+async function personalSalary(req, res) {
+  const { employee_id, month, year } = req.query || {};
+
+  const ist = new Date(Date.now() + 5.5*60*60*1000);
+  const m   = parseInt(month) || (ist.getUTCMonth() + 1);
+  const y   = parseInt(year)  || ist.getUTCFullYear();
+
+  const rows = await dbQuery(
+    "SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?",
+    [employee_id, m, y]
+  );
+
+  const salary = rows[0] || {
+    total_present: 0, total_absent: 0, total_late: 0,
+    early_ot_hours: 0, late_ot_hours: 0,
+    basic_earned: 0, normal_ot_amount: 0,
+    late_deduction: 0, net_salary: 0,
+  };
+
+  res.status(200).json({ success: true, month: m, year: y, salary });
+}
+
+// ── Manager: all employees' salary for a month (was salary-all.js) ──
+async function allSalary(req, res) {
+  const ist   = new Date(Date.now()+5.5*60*60*1000);
+  const month = parseInt(req.query?.month) || (ist.getUTCMonth()+1);
+  const year  = parseInt(req.query?.year)  || ist.getUTCFullYear();
+
+  const emps = await dbQuery(
+    "SELECT employee_id,name,department,basic_salary,ot_rate_per_hour FROM employees WHERE status='active' ORDER BY name"
+  );
+
+  const salRows = await dbQuery(
+    "SELECT * FROM monthly_salary WHERE month=? AND year=?",
+    [month, year]
+  );
+  const salMap = Object.fromEntries(salRows.map(s=>[s.employee_id, s]));
+
+  const result = emps.map(e=>{
+    const sal = salMap[e.employee_id] || {
+      total_present:0, total_absent:0, total_late:0,
+      early_ot_hours:0, late_ot_hours:0,
+      basic_earned:0, normal_ot_amount:0,
+      late_deduction:0, net_salary:0, is_locked:0,
+    };
+    return { ...e, ...sal };
+  });
+
+  res.status(200).json({ success:true, month, year, employees:result });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET")     return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { employee_id, month, year } = req.query || {};
-    if (!employee_id) return res.status(400).json({ error: "employee_id required" });
-
-    // Default to current IST month
-    const ist = new Date(Date.now() + 5.5*60*60*1000);
-    const m   = parseInt(month) || (ist.getUTCMonth() + 1);
-    const y   = parseInt(year)  || ist.getUTCFullYear();
-
-    const rows = await dbQuery(
-      "SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?",
-      [employee_id, m, y]
-    );
-
-    const salary = rows[0] || {
-      total_present: 0, total_absent: 0, total_late: 0,
-      early_ot_hours: 0, late_ot_hours: 0,
-      basic_earned: 0, normal_ot_amount: 0,
-      late_deduction: 0, net_salary: 0,
-    };
-
-    res.status(200).json({
-      success: true,
-      month:   m,
-      year:    y,
-      salary,
-    });
-
+    if (req.query?.employee_id) {
+      return await personalSalary(req, res);
+    }
+    return await allSalary(req, res);
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
