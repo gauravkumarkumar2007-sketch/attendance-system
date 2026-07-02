@@ -97,11 +97,15 @@ module.exports = async function handler(req, res) {
     const inMins     = parse12h(a.checkin_time);
     const workMins   = Math.max(0, nowMins - inMins);
     const otMul      = parseFloat(a.ot_multiplier || 1);
-    const otRate     = parseFloat(emp.ot_rate_per_hour || 50);
     const basic      = parseFloat(emp.basic_salary || 15000);
     const workDays   = parseFloat(s.working_days_month || "26");
     const dailyRate  = basic / workDays;
     const hourlyRate = dailyRate / 8;
+
+    // OT rate: manual value on the employee record wins; otherwise auto-calculate
+    // from basic salary (hourlyRate), so it stays in sync if basic salary changes.
+    const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined && emp.ot_rate_per_hour !== "";
+    const otRate       = hasManualOT ? parseFloat(emp.ot_rate_per_hour) : hourlyRate;
 
     const isSundayOrHoliday = otMul > 1;
 
@@ -137,8 +141,12 @@ module.exports = async function handler(req, res) {
       todayEarn         = Math.round((dailyRate + reportedOTAmt - reportedDeduct) * 100) / 100;
     }
 
-    await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=? WHERE employee_id=? AND date=?`,
-      [timeStr, Math.round(workMins/60*100)/100, Math.round(reportedLateOT*100)/100, zone, emp.employee_id, today]);
+    await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=?,checkout_selfie_base64=?,
+        earning_basic=?,earning_ot=?,earning_deduction=?,earning_total=?
+      WHERE employee_id=? AND date=?`,
+      [timeStr, Math.round(workMins/60*100)/100, Math.round(reportedLateOT*100)/100, zone, selfie_base64,
+       reportedDailyRate, reportedOTAmt, reportedDeduct, todayEarn,
+       emp.employee_id, today]);
 
     const sal = await dbQuery("SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?", [emp.employee_id, month, year]);
 
