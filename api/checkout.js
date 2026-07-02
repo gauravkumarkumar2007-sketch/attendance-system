@@ -103,34 +103,51 @@ module.exports = async function handler(req, res) {
     const dailyRate  = basic / workDays;
     const hourlyRate = dailyRate / 8;
 
-    const earlyOT    = parseFloat(a.early_ot_hours || 0);
-    const lateOT     = zone === "late_ot"    ? Math.max(0, (nowMins-coolE)/60) : 0;
-    const exitDeduct = zone === "early_exit" ? Math.max(0, (offE-nowMins)/60)  : 0;
     const isSundayOrHoliday = otMul > 1;
 
-    // OT Calculation: Sunday/Holiday = 2x rate
-    const earlyOTAmt    = earlyOT * otRate * otMul;
-    const lateOTAmt     = lateOT  * otRate * otMul;
-    const lateDeduct    = parseFloat(a.deduction_hours || 0) * hourlyRate;
-    const exitDeductAmt = exitDeduct * hourlyRate;
-    const totalDeduct   = lateDeduct + exitDeductAmt;
+    // ── Sunday/Holiday: the ENTIRE day's work is OT, paid at 2x rate.
+    //    No daily/base rate, no early/late deductions apply on these days. ──
+    let reportedEarlyOT, reportedLateOT, reportedOTAmt, reportedDailyRate, reportedDeduct, todayEarn;
 
-    // Sunday/Holiday: full day worked at 2x OT rate. Normal day: daily rate - deductions + OT.
-    const todayEarn = isSundayOrHoliday
-      ? Math.round(((workMins/60) * otRate * otMul) * 100) / 100
-      : Math.round((dailyRate + earlyOTAmt + lateOTAmt - totalDeduct) * 100) / 100;
+    if (isSundayOrHoliday) {
+      // Sunday/Holiday: the day's base salary is paid as usual, PLUS the entire
+      // work done that day counts as OT on top, at 2x rate. No deductions apply.
+      const holidayHours = Math.round(workMins/60 * 100) / 100;
+      reportedEarlyOT   = 0;
+      reportedLateOT    = holidayHours;                      // full day shows up as "OT hours"
+      reportedDailyRate = dailyRate;                         // base pay still applies
+      reportedDeduct    = 0;                                 // no deductions on a holiday
+      reportedOTAmt     = Math.round(holidayHours * otRate * otMul * 100) / 100;
+      todayEarn         = Math.round((dailyRate + reportedOTAmt) * 100) / 100;
+    } else {
+      const earlyOT     = parseFloat(a.early_ot_hours || 0);
+      const lateOT      = zone === "late_ot"    ? Math.max(0, (nowMins-coolE)/60) : 0;
+      const exitDeduct  = zone === "early_exit" ? Math.max(0, (offE-nowMins)/60)  : 0;
+
+      const earlyOTAmt    = earlyOT * otRate;                // normal days: OT always at 1x (otMul is 1 here)
+      const lateOTAmt     = lateOT  * otRate;
+      const lateDeduct    = parseFloat(a.deduction_hours || 0) * hourlyRate;
+      const exitDeductAmt = exitDeduct * hourlyRate;
+
+      reportedEarlyOT   = earlyOT;
+      reportedLateOT    = lateOT;
+      reportedDailyRate = dailyRate;
+      reportedDeduct    = lateDeduct + exitDeductAmt;
+      reportedOTAmt     = earlyOTAmt + lateOTAmt;
+      todayEarn         = Math.round((dailyRate + reportedOTAmt - reportedDeduct) * 100) / 100;
+    }
 
     await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=? WHERE employee_id=? AND date=?`,
-      [timeStr, Math.round(workMins/60*100)/100, Math.round(lateOT*100)/100, zone, emp.employee_id, today]);
+      [timeStr, Math.round(workMins/60*100)/100, Math.round(reportedLateOT*100)/100, zone, emp.employee_id, today]);
 
     const sal = await dbQuery("SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?", [emp.employee_id, month, year]);
 
     if (sal.length) {
       await dbQuery(`UPDATE monthly_salary SET total_present=total_present+1,early_ot_hours=early_ot_hours+?,late_ot_hours=late_ot_hours+?,basic_earned=basic_earned+?,normal_ot_amount=normal_ot_amount+?,late_deduction=late_deduction+?,net_salary=net_salary+?,updated_at=datetime('now') WHERE employee_id=? AND month=? AND year=?`,
-        [earlyOT, lateOT, dailyRate, earlyOTAmt+lateOTAmt, totalDeduct, todayEarn, emp.employee_id, month, year]);
+        [reportedEarlyOT, reportedLateOT, reportedDailyRate, reportedOTAmt, reportedDeduct, todayEarn, emp.employee_id, month, year]);
     } else {
       await dbQuery(`INSERT INTO monthly_salary(employee_id,month,year,total_present,early_ot_hours,late_ot_hours,basic_earned,normal_ot_amount,late_deduction,net_salary) VALUES(?,?,?,1,?,?,?,?,?,?)`,
-        [emp.employee_id, month, year, earlyOT, lateOT, dailyRate, earlyOTAmt+lateOTAmt, totalDeduct, todayEarn]);
+        [emp.employee_id, month, year, reportedEarlyOT, reportedLateOT, reportedDailyRate, reportedOTAmt, reportedDeduct, todayEarn]);
     }
 
     const ms = (await dbQuery("SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?", [emp.employee_id, month, year]))[0] || {};
@@ -139,12 +156,13 @@ module.exports = async function handler(req, res) {
       success: true, employee: emp.name, employee_id: emp.employee_id,
       checkin_time: a.checkin_time, checkout_time: timeStr,
       working_hours: Math.round(workMins/60*100)/100,
-      early_ot_hours: earlyOT, late_ot_hours: lateOT,
+      early_ot_hours: reportedEarlyOT, late_ot_hours: reportedLateOT,
       zone, today_earning: todayEarn,
-      daily_rate: Math.round(dailyRate*100)/100,
-      ot_amount:  Math.round((earlyOTAmt+lateOTAmt)*100)/100,
-      deduction:  Math.round(totalDeduct*100)/100,
+      daily_rate: Math.round(reportedDailyRate*100)/100,
+      ot_amount:  Math.round(reportedOTAmt*100)/100,
+      deduction:  Math.round(reportedDeduct*100)/100,
       ot_multiplier: otMul,
+      is_holiday_pay: isSundayOrHoliday,
       month_summary: {
         present:    parseInt(ms.total_present    || 0),
         absent:     parseInt(ms.total_absent     || 0),
