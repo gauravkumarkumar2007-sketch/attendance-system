@@ -352,6 +352,33 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <button class="mgr-btn-primary" onclick="loadAttAll()" style="margin-top:0">Search</button>
       </div>
       <div id="attTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select date to view</p></div>
+
+      <!-- Manual Attendance Form -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">✍️ Manual Attendance Entry</div>
+        <div class="mgr-form">
+          <label>Employee</label>
+          <select id="manualEmpId" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none">
+            <option value="">-- Select Employee --</option>
+          </select>
+          <label>Date</label>
+          <input type="date" id="manualDate"/>
+          <label>Check-in Time (HH:MM AM/PM)</label>
+          <input type="text" id="manualCheckin" placeholder="09:30 AM"/>
+          <label>Check-out Time (HH:MM AM/PM)</label>
+          <input type="text" id="manualCheckout" placeholder="06:00 PM"/>
+          <label>Status</label>
+          <select id="manualStatus" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none">
+            <option value="present">Present</option>
+            <option value="absent">Absent</option>
+            <option value="late">Late</option>
+          </select>
+          <label>Note (optional)</label>
+          <input type="text" id="manualNote" placeholder="Reason for manual entry..."/>
+        </div>
+        <button class="mgr-btn-primary" onclick="saveManualAttendance()">💾 Save Attendance</button>
+        <div id="manualAttMsg" style="margin-top:10px;font-size:13px"></div>
+      </div>
     </div>
     <div class="mgr-section" id="mgr-approvals">
       <p style="font-size:13px;color:var(--subtext);margin-bottom:14px">Employees who checked in between 10:05–10:30 AM — approve (no deduction) or reject (deduction applies)</p>
@@ -817,6 +844,7 @@ function initMgr(){
   loadEmployees();
   loadApprovals();
   loadDisputes();
+  populateEmpDropdown();
   document.getElementById("attDate").value=ist.toISOString().split("T")[0];
   document.getElementById("mgrSalMonth").value=String(ist.getUTCMonth()+1);
   document.getElementById("mgrSalYear").value=String(ist.getUTCFullYear());
@@ -1003,6 +1031,88 @@ async function deactivateEmp(id,name){
   }catch(e){showToast("Error: "+e.message,"err");}
 }
 let attPhotoData={};
+async function populateEmpDropdown(){
+  try{
+    const res=await fetch("/api/employees");
+    const d=await res.json();
+    const sel=document.getElementById("manualEmpId");
+    if(!sel)return;
+    sel.innerHTML='<option value="">-- Select Employee --</option>';
+    (d.employees||[]).forEach(e=>{
+      sel.innerHTML+=`<option value="${e.employee_id}">${e.name} (${e.employee_id})</option>`;
+    });
+  }catch(e){}
+}
+
+async function saveManualAttendance(){
+  const empId   = document.getElementById("manualEmpId").value;
+  const date    = document.getElementById("manualDate").value;
+  const checkin = document.getElementById("manualCheckin").value.trim();
+  const checkout= document.getElementById("manualCheckout").value.trim();
+  const status  = document.getElementById("manualStatus").value;
+  const msg     = document.getElementById("manualAttMsg");
+
+  if(!empId||!date){msg.textContent="❌ Employee aur date select karo";msg.style.color="var(--red)";return;}
+
+  try{
+    // Calculate working hours if both times given
+    let workHrs=0, earlyOT=0, lateOT=0, deductHrs=0;
+    if(checkin && checkout){
+      const parseT = t => {
+        const [time,ap] = t.trim().split(" ");
+        let [h,m] = time.split(":").map(Number);
+        if(ap==="PM"&&h!==12)h+=12;
+        if(ap==="AM"&&h===12)h=0;
+        return h*60+m;
+      };
+      const inM  = parseT(checkin);
+      const outM = parseT(checkout);
+      workHrs = Math.max(0,(outM-inM)/60);
+      // Early OT: before 9:30 AM
+      if(inM < 570) earlyOT = Math.max(0,(600-inM)/60);
+      // Late deduct: after 10:30
+      if(inM > 630) deductHrs = Math.max(0,(inM-600)/60);
+      // Late OT: after 6:10 PM
+      if(outM > 1090) lateOT = Math.max(0,(outM-1090)/60);
+    }
+
+    // Check if Sunday
+    const d = new Date(date+"T00:00:00Z");
+    const isSun = d.getUTCDay()===0 ? 1 : 0;
+    const otMul = isSun ? 2.0 : 1.0;
+
+    // Save via attendance-all PUT
+    const res=await fetch("/api/attendance-all",{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        employee_id:empId, date,
+        checkin_time:checkin||null,
+        checkout_time:checkout||null,
+        working_hours:Math.round(workHrs*100)/100,
+        early_ot_hours:Math.round(earlyOT*100)/100,
+        late_ot_hours:Math.round(lateOT*100)/100,
+        deduction_hours:Math.round(deductHrs*100)/100,
+        is_sunday:isSun, ot_multiplier:otMul,
+        checkin_status:status==="late"?"late_deduct":"normal",
+        checkout_status:"normal",
+        status, manual:true
+      })
+    });
+    const data=await res.json();
+    if(!data.success)throw new Error(data.error||"Failed");
+    msg.textContent="✅ Attendance saved!";
+    msg.style.color="var(--green)";
+    setTimeout(()=>{msg.textContent="";},3000);
+    // Reload attendance table if same date selected
+    const attDate=document.getElementById("attDate").value;
+    if(attDate===date)loadAttAll();
+  }catch(e){
+    msg.textContent="❌ "+e.message;
+    msg.style.color="var(--red)";
+  }
+}
+
 async function loadAttAll(){
   const date=document.getElementById("attDate").value;
   if(!date){showToast("Select a date!","err");return;}
