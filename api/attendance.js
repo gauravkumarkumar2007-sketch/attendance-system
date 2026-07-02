@@ -1,4 +1,6 @@
-// api/attendance.js — Get attendance records
+// api/attendance.js — Personal attendance history (GET ?employee_id=)
+//                      + Manager day view (GET ?date=) + Manager edit/add (PUT)
+// Merged from attendance.js + attendance-all.js to save a Vercel Serverless Function slot.
 const https = require("https");
 
 function dbQuery(sql, params = []) {
@@ -48,39 +50,128 @@ function dbQuery(sql, params = []) {
   });
 }
 
+// ── Manager view: attendance for a single day (was attendance-all.js GET) ──
+async function managerDayView(req, res) {
+  const { date, employee_id } = req.query || {};
+  const ist   = new Date(Date.now()+5.5*60*60*1000);
+  const today = date || ist.toISOString().split("T")[0];
+
+  let sql, params;
+  if (employee_id) {
+    sql    = `SELECT a.*, e.name, e.department FROM attendance a
+              JOIN employees e ON a.employee_id=e.employee_id
+              WHERE a.employee_id=? AND a.date=? ORDER BY a.checkin_time`;
+    params = [employee_id, today];
+  } else {
+    sql    = `SELECT a.*, e.name, e.department FROM attendance a
+              JOIN employees e ON a.employee_id=e.employee_id
+              WHERE a.date=? ORDER BY e.name`;
+    params = [today];
+  }
+
+  const att = await dbQuery(sql, params);
+  const allEmps = await dbQuery(
+    "SELECT employee_id, name, department FROM employees WHERE status='active' ORDER BY name"
+  );
+  const presentIds = new Set(att.map(a=>a.employee_id));
+  const absent = allEmps.filter(e=>!presentIds.has(e.employee_id)).map(e=>({
+    ...e, date:today, status:"absent", checkin_time:null, checkout_time:null
+  }));
+
+  res.status(200).json({
+    success: true, date: today,
+    attendance: att, absent,
+    present_count: att.length, absent_count: absent.length,
+  });
+}
+
+// ── Personal view: attendance history for one employee (was attendance.js GET) ──
+async function personalHistory(req, res) {
+  const { employee_id, month, year } = req.query || {};
+  if (!employee_id) return res.status(400).json({ error: "employee_id required" });
+
+  let sql    = "SELECT * FROM attendance WHERE employee_id=?";
+  let params = [employee_id];
+
+  if (month && year) {
+    const m     = parseInt(month);
+    const y     = parseInt(year);
+    const start = `${y}-${String(m).padStart(2,"0")}-01`;
+    const end   = `${y}-${String(m).padStart(2,"0")}-31`;
+    sql    = "SELECT * FROM attendance WHERE employee_id=? AND date>=? AND date<=? ORDER BY date DESC";
+    params = [employee_id, start, end];
+  } else {
+    sql    = "SELECT * FROM attendance WHERE employee_id=? ORDER BY date DESC LIMIT 30";
+    params = [employee_id];
+  }
+
+  const rows = await dbQuery(sql, params);
+  res.status(200).json({ success: true, attendance: rows });
+}
+
+// ── Manager edit/add attendance record (was attendance-all.js PUT) ──
+async function managerEdit(req, res) {
+  const b = req.body || {};
+
+  const existing = await dbQuery(
+    "SELECT id FROM attendance WHERE employee_id=? AND date=?",
+    [b.employee_id, b.date]
+  );
+
+  if (existing.length) {
+    await dbQuery(
+      `UPDATE attendance SET
+        checkin_time=?, checkout_time=?, working_hours=?,
+        early_ot_hours=?, late_ot_hours=?, deduction_hours=?,
+        is_sunday=?, ot_multiplier=?, checkin_status=?,
+        checkout_status=?, status=?
+      WHERE employee_id=? AND date=?`,
+      [b.checkin_time||null, b.checkout_time||null,
+       parseFloat(b.working_hours||0), parseFloat(b.early_ot_hours||0),
+       parseFloat(b.late_ot_hours||0), parseFloat(b.deduction_hours||0),
+       parseInt(b.is_sunday||0), parseFloat(b.ot_multiplier||1.0),
+       b.checkin_status||"normal", b.checkout_status||"normal",
+       b.status||"present", b.employee_id, b.date]
+    );
+  } else {
+    await dbQuery(
+      `INSERT INTO attendance
+        (employee_id, date, checkin_time, checkout_time, working_hours,
+         early_ot_hours, late_ot_hours, deduction_hours, is_sunday,
+         ot_multiplier, checkin_status, checkout_status, status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [b.employee_id, b.date,
+       b.checkin_time||null, b.checkout_time||null,
+       parseFloat(b.working_hours||0), parseFloat(b.early_ot_hours||0),
+       parseFloat(b.late_ot_hours||0), parseFloat(b.deduction_hours||0),
+       parseInt(b.is_sunday||0), parseFloat(b.ot_multiplier||1.0),
+       b.checkin_status||"normal", b.checkout_status||"normal",
+       b.status||"present"]
+    );
+  }
+  res.status(200).json({ success:true, message:"Attendance saved!" });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const empId = req.query?.employee_id;
-    const month = req.query?.month;
-    const year  = req.query?.year;
-
-    if (!empId) return res.status(400).json({ error: "employee_id required" });
-
-    let sql    = "SELECT * FROM attendance WHERE employee_id=?";
-    let params = [empId];
-
-    if (month && year) {
-      // Get specific month
-      const ist   = new Date(Date.now() + 5.5*60*60*1000);
-      const m     = parseInt(month);
-      const y     = parseInt(year);
-      const start = `${y}-${String(m).padStart(2,"0")}-01`;
-      const end   = `${y}-${String(m).padStart(2,"0")}-31`;
-      sql    = "SELECT * FROM attendance WHERE employee_id=? AND date>=? AND date<=? ORDER BY date DESC";
-      params = [empId, start, end];
-    } else {
-      // Get last 30 records
-      sql    = "SELECT * FROM attendance WHERE employee_id=? ORDER BY date DESC LIMIT 30";
-      params = [empId];
+    if (req.method === "GET") {
+      // ?date= present → manager day view. Otherwise → personal history.
+      if (req.query?.date !== undefined) {
+        return await managerDayView(req, res);
+      }
+      return await personalHistory(req, res);
     }
 
-    const rows = await dbQuery(sql, params);
-    res.status(200).json({ success: true, attendance: rows });
+    if (req.method === "PUT") {
+      return await managerEdit(req, res);
+    }
 
+    res.status(405).json({ error: "Method not allowed" });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
