@@ -82,16 +82,50 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // PUT — edit attendance record
+    // PUT — edit or manually add attendance record
     if (req.method==="PUT") {
       const b = req.body||{};
-      await dbQuery(
-        `UPDATE attendance SET checkin_time=?,checkout_time=?,status=?,checkin_status=?
-         WHERE employee_id=? AND date=?`,
-        [b.checkin_time, b.checkout_time, b.status||"present",
-         b.checkin_status||"normal", b.employee_id, b.date]
+
+      // Check if record exists
+      const existing = await dbQuery(
+        "SELECT id FROM attendance WHERE employee_id=? AND date=?",
+        [b.employee_id, b.date]
       );
-      return res.status(200).json({success:true, message:"Updated!"});
+
+      if (existing.length) {
+        // Update existing
+        await dbQuery(
+          `UPDATE attendance SET
+            checkin_time=?, checkout_time=?, working_hours=?,
+            early_ot_hours=?, late_ot_hours=?, deduction_hours=?,
+            is_sunday=?, ot_multiplier=?, checkin_status=?,
+            checkout_status=?, status=?
+          WHERE employee_id=? AND date=?`,
+          [b.checkin_time||null, b.checkout_time||null,
+           parseFloat(b.working_hours||0), parseFloat(b.early_ot_hours||0),
+           parseFloat(b.late_ot_hours||0), parseFloat(b.deduction_hours||0),
+           parseInt(b.is_sunday||0), parseFloat(b.ot_multiplier||1.0),
+           b.checkin_status||"normal", b.checkout_status||"normal",
+           b.status||"present", b.employee_id, b.date]
+        );
+      } else {
+        // Insert new (manual entry)
+        await dbQuery(
+          `INSERT INTO attendance
+            (employee_id, date, checkin_time, checkout_time, working_hours,
+             early_ot_hours, late_ot_hours, deduction_hours, is_sunday,
+             ot_multiplier, checkin_status, checkout_status, status)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [b.employee_id, b.date,
+           b.checkin_time||null, b.checkout_time||null,
+           parseFloat(b.working_hours||0), parseFloat(b.early_ot_hours||0),
+           parseFloat(b.late_ot_hours||0), parseFloat(b.deduction_hours||0),
+           parseInt(b.is_sunday||0), parseFloat(b.ot_multiplier||1.0),
+           b.checkin_status||"normal", b.checkout_status||"normal",
+           b.status||"present"]
+        );
+      }
+      return res.status(200).json({success:true, message:"Attendance saved!"});
     }
 
     res.status(405).json({error:"Method not allowed"});
