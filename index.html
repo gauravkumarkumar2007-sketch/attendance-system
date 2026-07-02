@@ -491,7 +491,7 @@ async function doLogin(){
   if(!id||!pwd){err.textContent="Employee ID and password required!";return;}
   btn.textContent="Loading...";btn.disabled=true;
   try{
-    const res=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:id,password:pwd})});
+    const res=await fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:id,password:pwd})});
     const data=await res.json();
     if(!data.success) throw new Error(data.error||"Login failed");
     EMP={id:data.employee.employee_id,naam:data.employee.name,phone:data.employee.phone||"",dept:data.employee.department||"",desig:data.employee.designation||"",joined:data.employee.joining_date||"",basic:parseFloat(data.employee.basic_salary)||15000,otRate:parseFloat(data.employee.ot_rate_per_hour)||50,tgId:data.employee.telegram_user_id};
@@ -513,7 +513,7 @@ async function doMgrLogin(){
   if(!pwd){err.textContent="Password required!";return;}
   btn.textContent="Loading...";btn.disabled=true;
   try{
-    const res=await fetch("/api/manager-login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pwd})});
+    const res=await fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pwd})});
     const data=await res.json();
     if(!data.success) throw new Error(data.error||"Wrong password");
     document.getElementById("mgrLoginWrap").style.display="none";
@@ -937,7 +937,7 @@ async function loadOverview(){
     const ist=new Date(Date.now()+5.5*60*60*1000);
     const today=ist.toISOString().split("T")[0];
     const [att,emps]=await Promise.all([
-      fetch("/api/attendance-all?date="+today).then(r=>r.json()),
+      fetch("/api/attendance?date="+today).then(r=>r.json()),
       fetch("/api/employees").then(r=>r.json()),
     ]);
     const present=att.attendance||[];
@@ -1082,7 +1082,7 @@ async function saveManualAttendance(){
     const otMul = isSun ? 2.0 : 1.0;
 
     // Save via attendance-all PUT
-    const res=await fetch("/api/attendance-all",{
+    const res=await fetch("/api/attendance",{
       method:"PUT",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -1118,7 +1118,7 @@ async function loadAttAll(){
   if(!date){showToast("Select a date!","err");return;}
   document.getElementById("attTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>Loading...</p>";
   try{
-    const res=await fetch("/api/attendance-all?date="+date);
+    const res=await fetch("/api/attendance?date="+date);
     const d=await res.json();
     const present=d.attendance||[];
     const absent=d.absent||[];
@@ -1160,7 +1160,7 @@ async function loadSalAll(){
   const year=document.getElementById("mgrSalYear").value;
   document.getElementById("salTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>Loading...</p>";
   try{
-    const res=await fetch(`/api/salary-all?month=${month}&year=${year}`);
+    const res=await fetch(`/api/salary?month=${month}&year=${year}`);
     const d=await res.json();
     const emps=d.employees||[];
     let totalNet=0;
