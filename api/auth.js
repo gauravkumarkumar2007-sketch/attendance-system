@@ -67,6 +67,16 @@ async function employeeLogin(req, res) {
   );
   const todayAtt = att[0]||null;
 
+  // Effective OT rate: manual value if set on the record, else auto from basic salary.
+  const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined && emp.ot_rate_per_hour !== "";
+  let effectiveOTRate = hasManualOT ? parseFloat(emp.ot_rate_per_hour) : null;
+  if (!hasManualOT) {
+    const sRows = await dbQuery("SELECT value FROM settings WHERE key='working_days_month'");
+    const workDays = parseFloat(sRows[0]?.value || "26");
+    const basic    = parseFloat(emp.basic_salary || 15000);
+    effectiveOTRate = Math.round((basic / workDays / 8) * 100) / 100;
+  }
+
   res.status(200).json({
     success: true,
     employee: {
@@ -78,7 +88,8 @@ async function employeeLogin(req, res) {
       designation:       emp.designation,
       joining_date:      emp.joining_date,
       basic_salary:      emp.basic_salary,
-      ot_rate_per_hour:  emp.ot_rate_per_hour,
+      ot_rate_per_hour:  effectiveOTRate,
+      ot_rate_mode:      hasManualOT ? "manual" : "auto",
       status:            emp.status,
     },
     today_attendance: todayAtt,
@@ -117,4 +128,3 @@ module.exports = async function handler(req, res) {
     res.status(500).json({ error: e.message });
   }
 };
-
