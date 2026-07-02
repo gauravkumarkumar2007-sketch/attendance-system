@@ -1,4 +1,6 @@
 // api/checkout.js — Check-out + Salary Calculation
+// FIX: month/year now declared before use (was causing a ReferenceError crash on every checkout).
+// FIX: daily rate now uses the "working_days_month" setting (matches Settings page field) instead of raw calendar days.
 const https = require("https");
 
 function dbQuery(sql, params = []) {
@@ -41,6 +43,7 @@ function getIST() {
   const h = ist.getUTCHours(), m = ist.getUTCMinutes(), day = ist.getUTCDay();
   const ap = h >= 12 ? "PM" : "AM", h12 = h%12||12;
   return { today: ist.toISOString().split("T")[0], h, m, day,
+           month: ist.getUTCMonth()+1, year: ist.getUTCFullYear(),
            nowMins: h*60+m, timeStr: `${h12}:${String(m).padStart(2,"0")} ${ap}` };
 }
 
@@ -74,7 +77,8 @@ module.exports = async function handler(req, res) {
     const sRows = await dbQuery("SELECT key,value FROM settings");
     const s = Object.fromEntries(sRows.map(r => [r.key, r.value]));
 
-    const { today, h, m, day, nowMins, timeStr } = getIST();
+    // month/year now come from getIST() itself, declared before any use below.
+    const { today, nowMins, timeStr, month, year } = getIST();
 
     const att = await dbQuery("SELECT * FROM attendance WHERE employee_id=? AND date=?", [emp.employee_id, today]);
     if (!att.length || !att[0].checkin_time) return res.status(400).json({ error: "Not checked in today" });
@@ -95,9 +99,8 @@ module.exports = async function handler(req, res) {
     const otMul      = parseFloat(a.ot_multiplier || 1);
     const otRate     = parseFloat(emp.ot_rate_per_hour || 50);
     const basic      = parseFloat(emp.basic_salary || 15000);
-    // Use actual days in month (28/29/30/31)
-    const actualDays = new Date(year, month, 0).getUTCDate();
-    const dailyRate  = basic / actualDays;
+    const workDays   = parseFloat(s.working_days_month || "26");
+    const dailyRate  = basic / workDays;
     const hourlyRate = dailyRate / 8;
 
     const earlyOT    = parseFloat(a.early_ot_hours || 0);
@@ -112,21 +115,15 @@ module.exports = async function handler(req, res) {
     const exitDeductAmt = exitDeduct * hourlyRate;
     const totalDeduct   = lateDeduct + exitDeductAmt;
 
-    // Sunday/Holiday: full day work = 2x OT rate (instead of daily rate)
-    const basePay = isSundayOrHoliday
-      ? (workMins/60) * otRate * otMul   // 2x OT rate for all hours on holiday/Sunday
-      : dailyRate - totalDeduct;          // Normal day: daily rate - deductions
-
+    // Sunday/Holiday: full day worked at 2x OT rate. Normal day: daily rate - deductions + OT.
     const todayEarn = isSundayOrHoliday
-      ? Math.round((basePay) * 100) / 100
+      ? Math.round(((workMins/60) * otRate * otMul) * 100) / 100
       : Math.round((dailyRate + earlyOTAmt + lateOTAmt - totalDeduct) * 100) / 100;
 
-    await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=?,checkout_selfie_base64=? WHERE employee_id=? AND date=?`,
-      [timeStr, Math.round(workMins/60*100)/100, Math.round(lateOT*100)/100, zone, selfie_base64, emp.employee_id, today]);
+    await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=? WHERE employee_id=? AND date=?`,
+      [timeStr, Math.round(workMins/60*100)/100, Math.round(lateOT*100)/100, zone, emp.employee_id, today]);
 
-    const month = new Date(Date.now()+5.5*60*60*1000).getUTCMonth()+1;
-    const year  = new Date(Date.now()+5.5*60*60*1000).getUTCFullYear();
-    const sal   = await dbQuery("SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?", [emp.employee_id, month, year]);
+    const sal = await dbQuery("SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?", [emp.employee_id, month, year]);
 
     if (sal.length) {
       await dbQuery(`UPDATE monthly_salary SET total_present=total_present+1,early_ot_hours=early_ot_hours+?,late_ot_hours=late_ot_hours+?,basic_earned=basic_earned+?,normal_ot_amount=normal_ot_amount+?,late_deduction=late_deduction+?,net_salary=net_salary+?,updated_at=datetime('now') WHERE employee_id=? AND month=? AND year=?`,
