@@ -95,20 +95,31 @@ module.exports = async function handler(req, res) {
     const otMul      = parseFloat(a.ot_multiplier || 1);
     const otRate     = parseFloat(emp.ot_rate_per_hour || 50);
     const basic      = parseFloat(emp.basic_salary || 15000);
-    const workDays   = parseFloat(s.working_days_month || "26");
-    const dailyRate  = basic / workDays;
+    // Use actual days in month (28/29/30/31)
+    const actualDays = new Date(year, month, 0).getUTCDate();
+    const dailyRate  = basic / actualDays;
     const hourlyRate = dailyRate / 8;
 
     const earlyOT    = parseFloat(a.early_ot_hours || 0);
     const lateOT     = zone === "late_ot"    ? Math.max(0, (nowMins-coolE)/60) : 0;
     const exitDeduct = zone === "early_exit" ? Math.max(0, (offE-nowMins)/60)  : 0;
+    const isSundayOrHoliday = otMul > 1;
 
-    const earlyOTAmt  = earlyOT * otRate * otMul;
-    const lateOTAmt   = lateOT  * otRate * otMul;
-    const lateDeduct  = parseFloat(a.deduction_hours || 0) * hourlyRate;
+    // OT Calculation: Sunday/Holiday = 2x rate
+    const earlyOTAmt    = earlyOT * otRate * otMul;
+    const lateOTAmt     = lateOT  * otRate * otMul;
+    const lateDeduct    = parseFloat(a.deduction_hours || 0) * hourlyRate;
     const exitDeductAmt = exitDeduct * hourlyRate;
-    const totalDeduct = lateDeduct + exitDeductAmt;
-    const todayEarn   = Math.round((dailyRate + earlyOTAmt + lateOTAmt - totalDeduct) * 100) / 100;
+    const totalDeduct   = lateDeduct + exitDeductAmt;
+
+    // Sunday/Holiday: full day work = 2x OT rate (instead of daily rate)
+    const basePay = isSundayOrHoliday
+      ? (workMins/60) * otRate * otMul   // 2x OT rate for all hours on holiday/Sunday
+      : dailyRate - totalDeduct;          // Normal day: daily rate - deductions
+
+    const todayEarn = isSundayOrHoliday
+      ? Math.round((basePay) * 100) / 100
+      : Math.round((dailyRate + earlyOTAmt + lateOTAmt - totalDeduct) * 100) / 100;
 
     await dbQuery(`UPDATE attendance SET checkout_time=?,working_hours=?,late_ot_hours=?,checkout_status=?,checkout_selfie_base64=? WHERE employee_id=? AND date=?`,
       [timeStr, Math.round(workMins/60*100)/100, Math.round(lateOT*100)/100, zone, selfie_base64, emp.employee_id, today]);
