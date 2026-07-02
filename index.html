@@ -337,7 +337,12 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <label>Designation</label><input type="text" id="fDesig" placeholder="Senior Worker"/>
           <label>Joining Date</label><input type="date" id="fJoin"/>
           <label>Basic Salary (Rs./month)</label><input type="number" id="fSalary" placeholder="15000"/>
-          <label>OT Rate (Rs./hour)</label><input type="number" id="fOT" placeholder="50"/>
+          <label>OT Rate (Rs./hour)</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <input type="checkbox" id="fOTAuto" onchange="toggleOTMode()" style="width:16px;height:16px"/>
+            <label style="margin:0;font-weight:400;font-size:13px" for="fOTAuto">Auto-calculate from basic salary</label>
+          </div>
+          <input type="number" id="fOT" placeholder="50"/>
           <label>Telegram User ID (optional)</label><input type="text" id="fTgId" placeholder="123456789"/>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
@@ -849,6 +854,7 @@ function initMgr(){
   document.getElementById("mgrSalMonth").value=String(ist.getUTCMonth()+1);
   document.getElementById("mgrSalYear").value=String(ist.getUTCFullYear());
   loadSettings();
+  loadAttAll();
 }
 function showMgrSection(s){
   document.querySelectorAll(".mgr-section").forEach(el=>el.classList.remove("active"));
@@ -857,6 +863,7 @@ function showMgrSection(s){
   event.target.closest(".mgr-tab").classList.add("active");
   if(s==="approvals") loadApprovals();
   if(s==="disputes") loadDisputes();
+  if(s==="attendance") loadAttAll();
 }
 async function loadDisputes(){
   const status=document.getElementById("dispFilter")?document.getElementById("dispFilter").value:"pending";
@@ -965,7 +972,8 @@ async function loadEmployees(){
     if(!emps.length){document.getElementById("empTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>No employees</p>";return;}
     let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>ID</th><th>Name</th><th>Department</th><th>Basic</th><th>OT/hr</th><th>Status</th><th>Actions</th></tr>`;
     emps.forEach(e=>{
-      html+=`<tr><td>${e.employee_id}</td><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>₹${Number(e.basic_salary||0).toLocaleString()}</td><td>₹${e.ot_rate_per_hour||50}</td><td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td><td><button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button> <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button></td></tr>`;
+      const otDisplay=(e.ot_rate_per_hour===null||e.ot_rate_per_hour===undefined||e.ot_rate_per_hour==="")?"Auto":("₹"+e.ot_rate_per_hour);
+      html+=`<tr><td>${e.employee_id}</td><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>₹${Number(e.basic_salary||0).toLocaleString()}</td><td>${otDisplay}</td><td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td><td><button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button> <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("empTable").innerHTML=html;
@@ -977,9 +985,18 @@ function showAddEmp(){
   document.getElementById("editEmpId").value="";
   ["fEmpId","fName","fPassword","fPhone","fDept","fDesig","fJoin","fTgId"].forEach(id=>{document.getElementById(id).value="";});
   document.getElementById("fSalary").value="15000";
-  document.getElementById("fOT").value="50";
+  document.getElementById("fOT").value="";
+  document.getElementById("fOTAuto").checked=true;
+  toggleOTMode();
 }
 function hideAddEmp(){document.getElementById("addEmpForm").style.display="none";}
+function toggleOTMode(){
+  const auto=document.getElementById("fOTAuto").checked;
+  const fOT=document.getElementById("fOT");
+  fOT.disabled=auto;
+  fOT.placeholder=auto?"Auto":"50";
+  if(auto)fOT.value="";
+}
 async function editEmp(id){
   try{
     const res=await fetch("/api/employees?id="+id);
@@ -996,7 +1013,10 @@ async function editEmp(id){
     document.getElementById("fDesig").value=e.designation||"";
     document.getElementById("fJoin").value=e.joining_date||"";
     document.getElementById("fSalary").value=e.basic_salary||15000;
-    document.getElementById("fOT").value=e.ot_rate_per_hour||50;
+    const isAuto = e.ot_rate_per_hour===null || e.ot_rate_per_hour===undefined || e.ot_rate_per_hour==="";
+    document.getElementById("fOTAuto").checked=isAuto;
+    document.getElementById("fOT").value=isAuto?"":e.ot_rate_per_hour;
+    toggleOTMode();
     document.getElementById("fTgId").value=e.telegram_user_id||"";
   }catch(e){showToast("Error: "+e.message,"err");}
 }
@@ -1007,14 +1027,16 @@ async function saveEmployee(){
   const pwd=document.getElementById("fPassword").value.trim();
   if(!name){showToast("Name required!","err");return;}
   try{
+    const otAuto=document.getElementById("fOTAuto").checked;
+    const otRate=otAuto?null:(parseFloat(document.getElementById("fOT").value)||50);
     if(editId){
-      const body={employee_id:editId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:parseFloat(document.getElementById("fOT").value)||50,status:"active"};
+      const body={employee_id:editId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:otRate,status:"active"};
       await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       if(pwd){await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body,password:pwd})});}
       showToast("Employee updated!","ok");
     }else{
       if(!pwd){showToast("Password required for new employee!","err");return;}
-      const body={employee_id:empId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,password:pwd,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),joining_date:document.getElementById("fJoin").value,basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:parseFloat(document.getElementById("fOT").value)||50};
+      const body={employee_id:empId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,password:pwd,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),joining_date:document.getElementById("fJoin").value,basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:otRate};
       await fetch("/api/employees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       showToast("Employee added!","ok");
     }
@@ -1124,17 +1146,28 @@ async function loadAttAll(){
     const absent=d.absent||[];
     const all=[...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
     attPhotoData={};
-    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>Photo</th></tr>`;
+    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>Photo</th><th>Action</th></tr>`;
     all.forEach(r=>{
       const ok=r.status==="present";
       const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
       const hasPhoto=r.selfie_base64||r.checkout_selfie_base64;
       if(hasPhoto) attPhotoData[r.employee_id]={name:r.name||r.employee_id,checkin:r.selfie_base64||null,checkout:r.checkout_selfie_base64||null,checkinTime:r.checkin_time,checkoutTime:r.checkout_time};
-      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td></tr>`;
+      const disapproveBtn=ok?`<button class="mgr-btn-danger" onclick="disapproveAttendance('${r.employee_id}','${date}','${(r.name||r.employee_id).replace(/'/g,"")}')">❌ Disapprove</button>`:"—";
+      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td><td>${disapproveBtn}</td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
   }catch(e){document.getElementById("attTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+async function disapproveAttendance(empId,date,name){
+  if(!confirm(`Disapprove ${name}'s attendance for ${date}?\n\nThis will mark the day ABSENT and reverse any salary already credited for it. This cannot be undone.`))return;
+  try{
+    const res=await fetch("/api/attendance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({disapprove:true,employee_id:empId,date})});
+    const d=await res.json();
+    if(!res.ok)throw new Error(d.error||"Failed");
+    showToast("Attendance disapproved — marked absent","ok");
+    loadAttAll();
+  }catch(e){showToast("Error: "+e.message,"err");}
 }
 function viewPhotos(empId){
   const d=attPhotoData[empId];
