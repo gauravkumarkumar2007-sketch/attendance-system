@@ -152,6 +152,57 @@ async function managerEdit(req, res) {
   res.status(200).json({ success:true, message:"Attendance saved!" });
 }
 
+// ── Manager disapproves attendance (e.g. selfie mismatch) → marks the day
+//    absent and reverses any salary already credited for that day, using the
+//    exact earning_* snapshot saved at checkout time (so the reversal is precise). ──
+async function disapproveAttendance(req, res) {
+  const { employee_id, date } = req.body || {};
+  if (!employee_id || !date)
+    return res.status(400).json({ error: "employee_id and date required" });
+
+  const rows = await dbQuery(
+    "SELECT * FROM attendance WHERE employee_id=? AND date=?",
+    [employee_id, date]
+  );
+  if (!rows.length)
+    return res.status(404).json({ error: "No attendance record found for this date" });
+
+  const a = rows[0];
+  if (a.status === "absent")
+    return res.status(400).json({ error: "Already marked absent" });
+
+  // If checkout already happened, salary for this day was credited — reverse it.
+  const earningTotal = parseFloat(a.earning_total || 0);
+  if (a.checkout_time && earningTotal > 0) {
+    const [y, m] = date.split("-").map(Number);
+    await dbQuery(
+      `UPDATE monthly_salary SET
+        total_present    = MAX(0, total_present-1),
+        basic_earned     = MAX(0, basic_earned - ?),
+        normal_ot_amount = MAX(0, normal_ot_amount - ?),
+        late_deduction   = MAX(0, late_deduction - ?),
+        net_salary       = net_salary - ?,
+        updated_at = datetime('now')
+      WHERE employee_id=? AND month=? AND year=?`,
+      [parseFloat(a.earning_basic||0), parseFloat(a.earning_ot||0),
+       parseFloat(a.earning_deduction||0), earningTotal,
+       employee_id, m, y]
+    );
+  }
+
+  // Mark the day absent and zero out pay fields so it can't be double-counted later.
+  await dbQuery(
+    `UPDATE attendance SET
+      status='absent', checkin_status='disapproved', checkout_status='disapproved',
+      working_hours=0, early_ot_hours=0, late_ot_hours=0, deduction_hours=0,
+      earning_basic=0, earning_ot=0, earning_deduction=0, earning_total=0
+    WHERE employee_id=? AND date=?`,
+    [employee_id, date]
+  );
+
+  res.status(200).json({ success:true, message:"Attendance disapproved — marked absent, salary reversed." });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,PUT,OPTIONS");
@@ -168,6 +219,9 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "PUT") {
+      if (req.body && req.body.disapprove) {
+        return await disapproveAttendance(req, res);
+      }
       return await managerEdit(req, res);
     }
 
