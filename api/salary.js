@@ -86,6 +86,9 @@ async function allSalary(req, res) {
   );
   const salMap = Object.fromEntries(salRows.map(s=>[s.employee_id, s]));
 
+  const sRows    = await dbQuery("SELECT value FROM settings WHERE key='working_days_month'");
+  const workDays = parseFloat(sRows[0]?.value || "26");
+
   const result = emps.map(e=>{
     const sal = salMap[e.employee_id] || {
       total_present:0, total_absent:0, total_late:0,
@@ -93,7 +96,12 @@ async function allSalary(req, res) {
       basic_earned:0, normal_ot_amount:0,
       late_deduction:0, net_salary:0, is_locked:0,
     };
-    return { ...e, ...sal };
+    const hasManualOT = e.ot_rate_per_hour !== null && e.ot_rate_per_hour !== undefined
+      && e.ot_rate_per_hour !== "" && parseFloat(e.ot_rate_per_hour) > 0;
+    const effectiveOTRate = hasManualOT
+      ? parseFloat(e.ot_rate_per_hour)
+      : Math.round((parseFloat(e.basic_salary||15000) / workDays / 8) * 100) / 100;
+    return { ...e, ...sal, effective_ot_rate: effectiveOTRate, ot_rate_mode: hasManualOT ? "manual" : "auto" };
   });
 
   res.status(200).json({ success:true, month, year, employees:result });
