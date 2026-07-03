@@ -232,6 +232,7 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <div class="rec-row"><span class="rec-label">Check-in</span><span class="rec-value rv-green" id="recIn">—</span></div>
         <div class="rec-row"><span class="rec-label">Check-out</span><span class="rec-value rv-orange" id="recOut">—</span></div>
         <div class="rec-row"><span class="rec-label">Working Hours</span><span class="rec-value" id="recHrs">—</span></div>
+        <div class="rec-row"><span class="rec-label">OT Rate</span><span class="rec-value rv-orange" id="recOTRate">—</span></div>
         <div class="rec-row"><span class="rec-label">OT Hours</span><span class="rec-value rv-orange" id="recOT">—</span></div>
         <div class="rec-row"><span class="rec-label">Today's Earnings</span><span class="rec-value rv-green" id="recEarn">—</span></div>
       </div>
@@ -253,6 +254,19 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <div class="sal-item"><div class="si-label">OT Hours</div><div class="si-value" style="color:var(--orange)" id="salOT">0h</div></div>
           <div class="sal-item"><div class="si-label">Late Days</div><div class="si-value" style="color:var(--yellow)" id="salLate">0</div></div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📄 Download Report</div>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <select id="rptMonth" style="flex:1;border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+          <input type="number" id="rptYear" style="width:90px;border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none" placeholder="2026"/>
+        </div>
+        <button class="action-btn" style="background:var(--mid-blue)" id="rptBtn" onclick="downloadReportPDF()">📄 Download PDF Report</button>
       </div>
       <div class="card">
         <div class="card-title">Attendance History</div>
@@ -426,6 +440,8 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <label>Office End Time (HH:MM)</label><input type="text" id="sOfficeEnd" placeholder="18:00"/>
           <label>Cooling Period Start (HH:MM)</label><input type="text" id="sCoolStart" placeholder="17:50"/>
           <label>Cooling Period End / OT Start (HH:MM)</label><input type="text" id="sCoolEnd" placeholder="18:10"/>
+          <label>Telegram Group Chat ID</label><input type="text" id="sTgGroup" placeholder="-1001234567890"/>
+          <p style="font-size:11px;color:var(--subtext);margin-top:-8px;margin-bottom:10px">💡 Har checkout ki report is group mein bhi jayegi. Har employee ko apni report unke apne Telegram par milegi (unka Telegram ID pehle se save hai).</p>
           <p style="font-size:11px;color:var(--subtext);margin-top:10px">💡 OT rate har employee ka alag hota hai — Employees tab mein set karo</p>
         </div>
         <button class="mgr-btn-primary" onclick="saveSettings()">Save Settings</button>
@@ -466,6 +482,8 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
   <div class="modal"><div id="successContent" style="text-align:center;padding:20px 0"></div></div>
 </div>
 <div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script>
 let EMP=null;
 let istH=0,istM=0,istS=0,istDay=0,istDt=1,istMon=0,istYr=2026;
@@ -562,6 +580,7 @@ function initApp(){
   document.getElementById("profPhone").textContent=EMP.phone||"—";
   document.getElementById("profSal").textContent="₹"+Number(EMP.basic).toLocaleString()+"/month";
   document.getElementById("profOT").textContent="₹"+EMP.otRate+"/hour";
+  document.getElementById("recOTRate").textContent="₹"+EMP.otRate+"/hour";
   document.getElementById("profJoin").textContent=EMP.joined||"—";
 
   fetch("/api/settings").then(r=>r.json()).then(d=>{
@@ -801,6 +820,10 @@ async function loadHistory(){
   const mName=MONS[now.getUTCMonth()]+" "+year;
   document.getElementById("histTitle").textContent="This Month ("+mName+")";
   document.getElementById("salMonth").textContent=mName;
+  if(!document.getElementById("rptYear").value){
+    document.getElementById("rptMonth").value=String(month);
+    document.getElementById("rptYear").value=String(year);
+  }
   try{
     const [a,s]=await Promise.all([
       fetch("/api/attendance?employee_id="+EMP.id).then(r=>r.json()),
@@ -838,6 +861,84 @@ async function loadHistory(){
     document.getElementById("salLate").textContent=sal.total_late||0;
   }catch(e){
     document.getElementById("histList").innerHTML=`<p style="color:var(--red);text-align:center;padding:20px">❌ ${e.message}</p>`;
+  }
+}
+async function downloadReportPDF(){
+  if(!EMP)return;
+  const btn=document.getElementById("rptBtn");
+  const orig=btn.textContent;
+  const month=parseInt(document.getElementById("rptMonth").value);
+  const year=parseInt(document.getElementById("rptYear").value)||new Date().getFullYear();
+  const MONS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const MONS3=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  btn.disabled=true; btn.textContent="Generating...";
+  try{
+    const [a,s]=await Promise.all([
+      fetch(`/api/attendance?employee_id=${EMP.id}&month=${month}&year=${year}`).then(r=>r.json()),
+      fetch(`/api/salary?employee_id=${EMP.id}&month=${month}&year=${year}`).then(r=>r.json()),
+    ]);
+    const recs=(a.attendance||[]).slice().sort((x,y)=>(x.date>y.date?1:-1));
+    const sal=s.salary||{};
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(16); doc.setFont(undefined,"bold");
+    doc.text("Attendance & Salary Report",14,18);
+    doc.setFontSize(10); doc.setFont(undefined,"normal");
+    doc.text(`${MONS[month-1]} ${year}`,14,25);
+
+    doc.setFontSize(11);
+    doc.text(`Employee: ${EMP.naam}  (${EMP.id})`,14,35);
+    doc.text(`Department: ${EMP.dept||"—"}      Designation: ${EMP.desig||"—"}`,14,42);
+    doc.text(`OT Rate: ₹${EMP.otRate}/hour`,14,49);
+
+    // Summary table
+    const otHours=(parseFloat(sal.early_ot_hours||0)+parseFloat(sal.late_ot_hours||0)).toFixed(1);
+    doc.autoTable({
+      startY: 57,
+      head: [["Summary","Value"]],
+      body: [
+        ["Present Days", sal.total_present||0],
+        ["Absent Days", sal.total_absent||0],
+        ["Late Days", sal.total_late||0],
+        ["Total OT Hours", otHours+"h"],
+        ["Basic Earned", "₹"+Math.round(parseFloat(sal.basic_earned||0)).toLocaleString()],
+        ["OT Amount", "₹"+Math.round(parseFloat(sal.normal_ot_amount||0)).toLocaleString()],
+        ["Deductions", "₹"+Math.round(parseFloat(sal.late_deduction||0)).toLocaleString()],
+        ["Net Salary", "₹"+Math.round(parseFloat(sal.net_salary||0)).toLocaleString()],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [26,58,92] },
+      styles: { fontSize: 10 },
+    });
+
+    // Day-wise attendance table
+    const rows = recs.map(r=>{
+      const dt=new Date((r.date||"")+"T00:00:00Z");
+      const dayLabel = isNaN(dt) ? (r.date||"—") : `${dt.getUTCDate()} ${MONS3[dt.getUTCMonth()]}`;
+      const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
+      const ot=(parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0)).toFixed(1);
+      return [dayLabel, r.checkin_time||"—", r.checkout_time||"—", wh, ot+"h", r.status==="present"?"Present":"Absent"];
+    });
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Date","Check-in","Check-out","Hours","OT","Status"]],
+      body: rows.length ? rows : [["No records for this month","—","—","—","—","—"]],
+      theme: "striped",
+      headStyles: { fillColor: [26,58,92] },
+      styles: { fontSize: 9 },
+    });
+
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(`Generated on ${new Date().toLocaleDateString()}`,14,doc.internal.pageSize.getHeight()-10);
+
+    doc.save(`${EMP.naam.replace(/\s+/g,"_")}_${MONS[month-1]}_${year}_Report.pdf`);
+  }catch(e){
+    showToast("Error generating report: "+e.message,"err");
+  }finally{
+    btn.disabled=false; btn.textContent=orig;
   }
 }
 function initMgr(){
@@ -972,7 +1073,7 @@ async function loadEmployees(){
     if(!emps.length){document.getElementById("empTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>No employees</p>";return;}
     let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>ID</th><th>Name</th><th>Department</th><th>Basic</th><th>OT/hr</th><th>Status</th><th>Actions</th></tr>`;
     emps.forEach(e=>{
-      const otDisplay=(e.ot_rate_per_hour===null||e.ot_rate_per_hour===undefined||e.ot_rate_per_hour==="")?"Auto":("₹"+e.ot_rate_per_hour);
+      const otDisplay=(e.ot_rate_per_hour===null||e.ot_rate_per_hour===undefined||e.ot_rate_per_hour===""||parseFloat(e.ot_rate_per_hour)<=0)?"Auto":("₹"+e.ot_rate_per_hour);
       html+=`<tr><td>${e.employee_id}</td><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>₹${Number(e.basic_salary||0).toLocaleString()}</td><td>${otDisplay}</td><td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td><td><button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button> <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button></td></tr>`;
     });
     html+="</table></div>";
@@ -1013,7 +1114,7 @@ async function editEmp(id){
     document.getElementById("fDesig").value=e.designation||"";
     document.getElementById("fJoin").value=e.joining_date||"";
     document.getElementById("fSalary").value=e.basic_salary||15000;
-    const isAuto = e.ot_rate_per_hour===null || e.ot_rate_per_hour===undefined || e.ot_rate_per_hour==="";
+    const isAuto = e.ot_rate_per_hour===null || e.ot_rate_per_hour===undefined || e.ot_rate_per_hour==="" || parseFloat(e.ot_rate_per_hour)<=0;
     document.getElementById("fOTAuto").checked=isAuto;
     document.getElementById("fOT").value=isAuto?"":e.ot_rate_per_hour;
     toggleOTMode();
@@ -1153,7 +1254,9 @@ async function loadAttAll(){
       const hasPhoto=r.selfie_base64||r.checkout_selfie_base64;
       if(hasPhoto) attPhotoData[r.employee_id]={name:r.name||r.employee_id,checkin:r.selfie_base64||null,checkout:r.checkout_selfie_base64||null,checkinTime:r.checkin_time,checkoutTime:r.checkout_time};
       const disapproveBtn=ok?`<button class="mgr-btn-danger" onclick="disapproveAttendance('${r.employee_id}','${date}','${(r.name||r.employee_id).replace(/'/g,"")}')">❌ Disapprove</button>`:"—";
-      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td><td>${disapproveBtn}</td></tr>`;
+      const disapproved=r.checkin_status==="disapproved";
+      const statusLabel=ok?"Present":(disapproved?"Disapproved":"Absent");
+      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${statusLabel}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td><td>${disapproveBtn}</td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
@@ -1197,14 +1300,15 @@ async function loadSalAll(){
     const d=await res.json();
     const emps=d.employees||[];
     let totalNet=0;
-    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Present</th><th>OT Hours</th><th>Basic</th><th>OT Amt</th><th>Deductions</th><th>Net Salary</th></tr>`;
+    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Present</th><th>OT Rate</th><th>OT Hours</th><th>Basic</th><th>OT Amt</th><th>Deductions</th><th>Net Salary</th></tr>`;
     emps.forEach(e=>{
       const net=parseFloat(e.net_salary||0);
       totalNet+=net;
       const ot=(parseFloat(e.early_ot_hours||0)+parseFloat(e.late_ot_hours||0)).toFixed(1);
-      html+=`<tr><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>${e.total_present||0}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td></tr>`;
+      const otRateLabel="₹"+e.effective_ot_rate+(e.ot_rate_mode==="auto"?" (auto)":"");
+      html+=`<tr><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>${e.total_present||0}</td><td>${otRateLabel}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td></tr>`;
     });
-    html+=`<tr style="background:var(--gray);font-weight:700"><td colspan="7">Total Salary Payable</td><td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td></tr>`;
+    html+=`<tr style="background:var(--gray);font-weight:700"><td colspan="8">Total Salary Payable</td><td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td></tr>`;
     html+="</table></div>";
     document.getElementById("salTable").innerHTML=html;
   }catch(e){document.getElementById("salTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
@@ -1225,9 +1329,13 @@ async function loadSettings(){
     document.getElementById("sOfficeEnd").value=s.office_end||"18:00";
     document.getElementById("sCoolStart").value=s.cooling_start||"17:50";
     document.getElementById("sCoolEnd").value=s.cooling_end||"18:10";
+    document.getElementById("sTgGroup").value=s.telegram_group_chat_id||"";
   }catch(e){}
 }
 async function saveSettings(){
+  const btn=event.target;
+  const orig=btn.textContent;
+  btn.disabled=true; btn.textContent="Saving...";
   const body={
     company_name:document.getElementById("sCompany").value,
     office_lat:document.getElementById("sLat").value,
@@ -1240,9 +1348,12 @@ async function saveSettings(){
     office_end:document.getElementById("sOfficeEnd").value,
     cooling_start:document.getElementById("sCoolStart").value,
     cooling_end:document.getElementById("sCoolEnd").value,
+    telegram_group_chat_id:document.getElementById("sTgGroup").value,
   };
   try{
-    await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const res=await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||("Save failed ("+res.status+")"));
     document.getElementById("settingsMsg").textContent="✅ Settings saved!";
     document.getElementById("settingsMsg").style.color="var(--green)";
     setTimeout(()=>document.getElementById("settingsMsg").textContent="",3000);
@@ -1250,21 +1361,38 @@ async function saveSettings(){
     if(body.office_lat) officeLat=parseFloat(body.office_lat);
     if(body.office_lng) officeLng=parseFloat(body.office_lng);
     if(body.radius_meters) officeRadius=parseFloat(body.radius_meters);
-  }catch(e){showToast("Error: "+e.message,"err");}
+  }catch(e){
+    document.getElementById("settingsMsg").textContent="❌ "+e.message;
+    document.getElementById("settingsMsg").style.color="var(--red)";
+    showToast("Error: "+e.message,"err");
+  }finally{
+    btn.disabled=false; btn.textContent=orig;
+  }
 }
 async function changeMgrPwd(){
   const np=document.getElementById("sNewPwd").value;
   const cp=document.getElementById("sConfPwd").value;
   if(!np){showToast("Enter new password!","err");return;}
   if(np!==cp){showToast("Passwords don't match!","err");return;}
+  const btn=event.target;
+  const orig=btn.textContent;
+  btn.disabled=true; btn.textContent="Saving...";
   try{
-    await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({manager_password:np})});
+    const res=await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({manager_password:np})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||("Save failed ("+res.status+")"));
     document.getElementById("settingsMsg").textContent="✅ Password changed!";
     document.getElementById("settingsMsg").style.color="var(--green)";
     document.getElementById("sNewPwd").value="";
     document.getElementById("sConfPwd").value="";
     setTimeout(()=>document.getElementById("settingsMsg").textContent="",3000);
-  }catch(e){showToast("Error: "+e.message,"err");}
+  }catch(e){
+    document.getElementById("settingsMsg").textContent="❌ "+e.message;
+    document.getElementById("settingsMsg").style.color="var(--red)";
+    showToast("Error: "+e.message,"err");
+  }finally{
+    btn.disabled=false; btn.textContent=orig;
+  }
 }
 function showPage(p){
   document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
