@@ -68,7 +68,9 @@ async function employeeLogin(req, res) {
   const todayAtt = att[0]||null;
 
   // Effective OT rate: manual value if set on the record, else auto from basic salary.
-  const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined && emp.ot_rate_per_hour !== "";
+  // (0/null/blank all mean "no manual rate set" — the DB column defaults to 0.)
+  const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined
+    && emp.ot_rate_per_hour !== "" && parseFloat(emp.ot_rate_per_hour) > 0;
   let effectiveOTRate = hasManualOT ? parseFloat(emp.ot_rate_per_hour) : null;
   if (!hasManualOT) {
     const sRows = await dbQuery("SELECT value FROM settings WHERE key='working_days_month'");
