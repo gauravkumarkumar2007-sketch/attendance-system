@@ -59,6 +59,33 @@ function parse12h(t) {
   } catch { return 9*60; }
 }
 
+// Escapes the few characters that matter for Telegram's HTML parse mode.
+function escapeHtml(str) {
+  return String(str||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// Sends a message via the Telegram Bot API. Fails silently (never throws) —
+// a missing bot token, un-started chat, or network hiccup should never break checkout.
+function sendTelegramMessage(chatId, text) {
+  return new Promise((resolve) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token || !chatId) return resolve(false);
+    const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" });
+    const options = {
+      hostname: "api.telegram.org",
+      path: `/bot${token}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    };
+    const req = https.request(options, r => {
+      let data=""; r.on("data",d=>data+=d);
+      r.on("end", () => resolve(true));
+    });
+    req.on("error", () => resolve(false));
+    req.write(body); req.end();
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -104,7 +131,9 @@ module.exports = async function handler(req, res) {
 
     // OT rate: manual value on the employee record wins; otherwise auto-calculate
     // from basic salary (hourlyRate), so it stays in sync if basic salary changes.
-    const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined && emp.ot_rate_per_hour !== "";
+    // (0/null/blank all mean "no manual rate set" — the DB column defaults to 0.)
+    const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined
+      && emp.ot_rate_per_hour !== "" && parseFloat(emp.ot_rate_per_hour) > 0;
     const otRate       = hasManualOT ? parseFloat(emp.ot_rate_per_hour) : hourlyRate;
 
     const isSundayOrHoliday = otMul > 1;
@@ -159,6 +188,32 @@ module.exports = async function handler(req, res) {
     }
 
     const ms = (await dbQuery("SELECT * FROM monthly_salary WHERE employee_id=? AND month=? AND year=?", [emp.employee_id, month, year]))[0] || {};
+
+    // ── Telegram reports: one to the employee, one to the manager group.
+    //    Best-effort — never blocks or fails the checkout itself. ──
+    try {
+      const otHoursTotal = Math.round((reportedEarlyOT + reportedLateOT) * 100) / 100;
+      const safeName = escapeHtml(emp.name);
+      const employeeMsg =
+        `✅ <b>Attendance Report</b> — ${today}\n\n` +
+        `Check-in: ${a.checkin_time}\n` +
+        `Check-out: ${timeStr}\n` +
+        `Working Hours: ${Math.round(workMins/60*100)/100}h\n` +
+        `OT Hours: ${otHoursTotal}h\n` +
+        `Today's Earning: ₹${todayEarn}\n\n` +
+        `<b>This Month</b>\n` +
+        `Present: ${ms.total_present||0} | Net Salary: ₹${Math.round(parseFloat(ms.net_salary||0))}`;
+
+      const groupMsg =
+        `📋 <b>${safeName}</b> (${emp.employee_id}) checked out\n` +
+        `${today} | In: ${a.checkin_time} → Out: ${timeStr}\n` +
+        `Hours: ${Math.round(workMins/60*100)/100}h | OT: ${otHoursTotal}h | Earning: ₹${todayEarn}`;
+
+      await Promise.allSettled([
+        sendTelegramMessage(emp.telegram_user_id, employeeMsg),
+        sendTelegramMessage(s.telegram_group_chat_id, groupMsg),
+      ]);
+    } catch(e) { /* never fail checkout because of Telegram */ }
 
     res.status(200).json({
       success: true, employee: emp.name, employee_id: emp.employee_id,
