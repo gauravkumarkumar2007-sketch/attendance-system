@@ -35,6 +35,47 @@ function dbQuery(sql, params=[]) {
   });
 }
 
+// Sends MULTIPLE statements in a single Turso pipeline request (one network
+// round-trip) instead of one request per statement — used for saving many
+// settings at once, which was previously slow/timeout-prone (11 sequential
+// round-trips) and made the Save Settings button feel like it did nothing.
+function dbBatch(statements) {
+  return new Promise((resolve, reject) => {
+    const url   = (process.env.TURSO_DATABASE_URL||"").trim().replace("libsql://","https://")+"/v2/pipeline";
+    const token = process.env.TURSO_AUTH_TOKEN||"";
+    const toArgs = (params=[]) => params.map(p=>{
+      if(p===null||p===undefined) return {type:"null"};
+      if(typeof p==="number"){ if(Number.isInteger(p)) return {type:"integer",value:String(p)}; return {type:"float",value:p}; }
+      return {type:"text",value:String(p)};
+    });
+    const requests = statements.map(({sql,params}) => ({
+      type:"execute",
+      stmt: (params && params.length) ? {sql, args: toArgs(params)} : {sql}
+    }));
+    requests.push({type:"close"});
+    const body = JSON.stringify({requests});
+    const u = new URL(url);
+    const opts = {hostname:u.hostname, path:u.pathname, method:"POST",
+      headers:{"Authorization":`Bearer ${token}`,"Content-Type":"application/json","Content-Length":Buffer.byteLength(body)}};
+    const req = https.request(opts, r=>{
+      let raw=""; r.on("data",d=>raw+=d);
+      r.on("end",()=>{
+        try{
+          const parsed = JSON.parse(raw);
+          if(parsed.error) return reject(new Error("Turso: "+parsed.error));
+          if(!parsed.results) return reject(new Error("Bad response: "+raw.substring(0,200)));
+          for (const r of parsed.results) {
+            if (r && r.type === "error") return reject(new Error(r.error?.message || "DB error"));
+          }
+          resolve(parsed.results);
+        }catch(e){ reject(new Error("Parse: "+e.message)); }
+      });
+    });
+    req.on("error", e=>reject(new Error("Net: "+e.message)));
+    req.write(body); req.end();
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin","*");
   res.setHeader("Access-Control-Allow-Methods","GET,PUT,OPTIONS");
@@ -50,11 +91,12 @@ module.exports = async function handler(req, res) {
 
     if (req.method==="PUT") {
       const updates = req.body||{};
-      for (const [key,value] of Object.entries(updates)) {
-        await dbQuery(
-          "INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)",
-          [key, String(value)]
-        );
+      const entries = Object.entries(updates);
+      if (entries.length) {
+        await dbBatch(entries.map(([key,value]) => ({
+          sql: "INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)",
+          params: [key, String(value)]
+        })));
       }
       return res.status(200).json({success:true, message:"Settings updated!"});
     }
