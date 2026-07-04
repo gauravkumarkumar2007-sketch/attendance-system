@@ -94,10 +94,10 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST")    return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { telegram_user_id, selfie_base64 = "" } = req.body;
-    if (!telegram_user_id) return res.status(400).json({ error: "Telegram ID required" });
+    const { employee_id, selfie_base64 = "" } = req.body;
+    if (!employee_id) return res.status(400).json({ error: "employee_id required" });
 
-    const emps = await dbQuery("SELECT * FROM employees WHERE telegram_user_id=? AND status='active'", [telegram_user_id]);
+    const emps = await dbQuery("SELECT * FROM employees WHERE employee_id=? AND status='active'", [employee_id]);
     if (!emps.length) return res.status(404).json({ error: "Employee not found" });
     const emp = emps[0];
 
