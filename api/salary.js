@@ -64,7 +64,8 @@ async function personalSalary(req, res) {
     total_present: 0, total_absent: 0, total_late: 0,
     early_ot_hours: 0, late_ot_hours: 0,
     basic_earned: 0, normal_ot_amount: 0,
-    late_deduction: 0, net_salary: 0,
+    late_deduction: 0, manual_bonus: 0, manual_deduction: 0, manual_note: "",
+    net_salary: 0,
   };
 
   res.status(200).json({ success: true, month: m, year: y, salary });
@@ -94,7 +95,8 @@ async function allSalary(req, res) {
       total_present:0, total_absent:0, total_late:0,
       early_ot_hours:0, late_ot_hours:0,
       basic_earned:0, normal_ot_amount:0,
-      late_deduction:0, net_salary:0, is_locked:0,
+      late_deduction:0, manual_bonus:0, manual_deduction:0, manual_note:"",
+      net_salary:0, is_locked:0,
     };
     const hasManualOT = e.ot_rate_per_hour !== null && e.ot_rate_per_hour !== undefined
       && e.ot_rate_per_hour !== "" && parseFloat(e.ot_rate_per_hour) > 0;
@@ -107,13 +109,55 @@ async function allSalary(req, res) {
   res.status(200).json({ success:true, month, year, employees:result });
 }
 
+// ── Manager: add a manual bonus or deduction to an employee's month (PUT) ──
+async function adjustSalary(req, res) {
+  const { employee_id, month, year, type, amount, note } = req.body || {};
+  if (!employee_id || !month || !year || !type || !amount)
+    return res.status(400).json({ error: "employee_id, month, year, type, amount required" });
+  if (type !== "bonus" && type !== "deduction")
+    return res.status(400).json({ error: "type must be 'bonus' or 'deduction'" });
+  const amt = Math.abs(parseFloat(amount));
+  if (!amt || amt <= 0) return res.status(400).json({ error: "amount must be a positive number" });
+
+  const sign = type === "bonus" ? 1 : -1;
+  const cleanNote = String(note||"").trim().slice(0,100); // keep notes short
+  const noteLine = `${type==="bonus"?"+":"-"}₹${amt}${cleanNote?" ("+cleanNote+")":""}`;
+
+  const existing = await dbQuery(
+    "SELECT manual_note FROM monthly_salary WHERE employee_id=? AND month=? AND year=?",
+    [employee_id, month, year]
+  );
+
+  if (existing.length) {
+    const col = type === "bonus" ? "manual_bonus" : "manual_deduction";
+    const combinedNote = (existing[0].manual_note ? existing[0].manual_note+" | " : "") + noteLine;
+    await dbQuery(
+      `UPDATE monthly_salary SET ${col}=${col}+?, net_salary=net_salary+?, manual_note=?, updated_at=datetime('now')
+       WHERE employee_id=? AND month=? AND year=?`,
+      [amt, sign*amt, combinedNote, employee_id, month, year]
+    );
+  } else {
+    await dbQuery(
+      `INSERT INTO monthly_salary(employee_id,month,year,manual_bonus,manual_deduction,manual_note,net_salary)
+       VALUES(?,?,?,?,?,?,?)`,
+      [employee_id, month, year, type==="bonus"?amt:0, type==="deduction"?amt:0, noteLine, sign*amt]
+    );
+  }
+
+  res.status(200).json({ success:true, message:`${type==="bonus"?"Bonus":"Deduction"} of ₹${amt} added!` });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "GET")     return res.status(405).json({ error: "Method not allowed" });
 
   try {
+    if (req.method === "PUT") {
+      return await adjustSalary(req, res);
+    }
+    if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+
     if (req.query?.employee_id) {
       return await personalSalary(req, res);
     }
