@@ -56,20 +56,38 @@ async function managerDayView(req, res) {
   const ist   = new Date(Date.now()+5.5*60*60*1000);
   const today = date || ist.toISOString().split("T")[0];
 
-  let sql, params;
   if (employee_id) {
-    sql    = `SELECT a.*, e.name, e.department FROM attendance a
-              JOIN employees e ON a.employee_id=e.employee_id
-              WHERE a.employee_id=? AND a.date=? ORDER BY a.checkin_time`;
-    params = [employee_id, today];
-  } else {
-    sql    = `SELECT a.*, e.name, e.department FROM attendance a
-              JOIN employees e ON a.employee_id=e.employee_id
-              WHERE a.date=? ORDER BY e.name`;
-    params = [today];
+    // Single-employee filter: just that person's record for the day — do NOT compute
+    // "absent" against all employees here (that previously mislabeled everyone else as absent).
+    const att = await dbQuery(
+      `SELECT a.*, e.name, e.department FROM attendance a
+       JOIN employees e ON a.employee_id=e.employee_id
+       WHERE a.employee_id=? AND a.date=? ORDER BY a.checkin_time`,
+      [employee_id, today]
+    );
+    if (att.length) {
+      return res.status(200).json({
+        success:true, date:today, attendance:att, absent:[],
+        present_count:att.length, absent_count:0,
+      });
+    }
+    const empRows = await dbQuery(
+      "SELECT employee_id,name,department FROM employees WHERE employee_id=?",
+      [employee_id]
+    );
+    const absent = empRows.map(e=>({...e, date:today, status:"absent", checkin_time:null, checkout_time:null}));
+    return res.status(200).json({
+      success:true, date:today, attendance:[], absent,
+      present_count:0, absent_count:absent.length,
+    });
   }
 
-  const att = await dbQuery(sql, params);
+  const att = await dbQuery(
+    `SELECT a.*, e.name, e.department FROM attendance a
+     JOIN employees e ON a.employee_id=e.employee_id
+     WHERE a.date=? ORDER BY e.name`,
+    [today]
+  );
   const allEmps = await dbQuery(
     "SELECT employee_id, name, department FROM employees WHERE status='active' ORDER BY name"
   );
