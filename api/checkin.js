@@ -105,18 +105,18 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = req.body || {};
-    const { telegram_user_id, location_lat, location_lng, selfie_base64 = "" } = body;
+    const { employee_id, location_lat, location_lng, selfie_base64 = "" } = body;
 
-    if (!telegram_user_id)
-      return res.status(400).json({ error: "telegram_user_id required" });
+    if (!employee_id)
+      return res.status(400).json({ error: "employee_id required" });
 
     // Get employee
     const emps = await dbQuery(
-      "SELECT * FROM employees WHERE telegram_user_id=? AND status='active'",
-      [telegram_user_id]
+      "SELECT * FROM employees WHERE employee_id=? AND status='active'",
+      [employee_id]
     );
     if (!emps.length)
-      return res.status(404).json({ error: "Employee not found: " + telegram_user_id });
+      return res.status(404).json({ error: "Employee not found: " + employee_id });
     const emp = emps[0];
 
     // Get settings
