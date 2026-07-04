@@ -327,6 +327,8 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-value" id="ovAbsent">-</div><div class="stat-label">Absent Today</div></div>
         <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-value" id="ovLate">-</div><div class="stat-label">Late Today</div></div>
         <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="ovTotal">-</div><div class="stat-label">Total Employees</div></div>
+        <div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-value" id="ovPending">-</div><div class="stat-label">Pending Approvals</div></div>
+        <div class="stat-card"><div class="stat-icon">💪</div><div class="stat-value" id="ovOTToday">-</div><div class="stat-label">Total OT Today</div></div>
       </div>
       <div class="card" style="max-width:100%">
         <div class="card-title">Today's Attendance</div>
@@ -368,6 +370,9 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     <div class="mgr-section" id="mgr-attendance">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <input type="date" id="attDate" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none"/>
+        <select id="attEmpFilter" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;max-width:180px">
+          <option value="">All Employees</option>
+        </select>
         <button class="mgr-btn-primary" onclick="loadAttAll()" style="margin-top:0">Search</button>
       </div>
       <div id="attTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select date to view</p></div>
@@ -415,6 +420,26 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <button class="mgr-btn-success" onclick="downloadAllSalaryPDF()" style="margin-top:0" id="rptAllBtn">📄 Download All (PDF)</button>
       </div>
       <div id="salTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select month to view</p></div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">➕ Add Bonus / Deduction</div>
+        <div class="mgr-form">
+          <label>Employee</label>
+          <select id="salAdjEmpId" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none">
+            <option value="">-- Select Employee --</option>
+          </select>
+          <label>Type</label>
+          <select id="salAdjType" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none">
+            <option value="bonus">Bonus (+)</option>
+            <option value="deduction">Deduction (-)</option>
+          </select>
+          <label>Amount (₹)</label>
+          <input type="number" id="salAdjAmount" placeholder="500"/>
+          <label>Note (optional)</label>
+          <input type="text" id="salAdjNote" placeholder="e.g. Diwali bonus / late fine"/>
+          <p style="font-size:11px;color:var(--subtext);margin-top:4px">Applies to the month/year selected above.</p>
+          <button class="action-btn" style="background:var(--mid-blue);margin-top:14px" onclick="addSalaryAdjustment()">Add</button>
+        </div>
+      </div>
     </div>
     <div class="mgr-section" id="mgr-disputes">
       <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -908,17 +933,27 @@ function buildEmployeeReportPDF(emp, month, year, recs, sal){
   const basicEarned=Math.round(parseFloat(sal.basic_earned||0));
   const otAmount=Math.round(parseFloat(sal.normal_ot_amount||0));
   const deduction=Math.round(parseFloat(sal.late_deduction||0));
-  const totalEarnings=basicEarned+otAmount;
+  const bonus=Math.round(parseFloat(sal.manual_bonus||0));
+  const manualDeduct=Math.round(parseFloat(sal.manual_deduction||0));
+  const totalEarnings=basicEarned+otAmount+bonus;
+  const totalDeductions=deduction+manualDeduct;
   const netSalary=Math.round(parseFloat(sal.net_salary||0));
+
+  const earningsBody=[
+    ["Basic Salary","₹"+basicEarned.toLocaleString()],
+    ["OT Amount","₹"+otAmount.toLocaleString()],
+  ];
+  if(bonus>0) earningsBody.push(["Manual Bonus","₹"+bonus.toLocaleString()]);
+  earningsBody.push([{content:"Total Earnings",styles:{fontStyle:"bold"}},{content:"₹"+totalEarnings.toLocaleString(),styles:{fontStyle:"bold"}}]);
+
+  const deductionsBody=[["Late/Exit Deduction","₹"+deduction.toLocaleString()]];
+  if(manualDeduct>0) deductionsBody.push(["Manual Deduction","₹"+manualDeduct.toLocaleString()]);
+  deductionsBody.push([{content:"Total Deductions",styles:{fontStyle:"bold"}},{content:"₹"+totalDeductions.toLocaleString(),styles:{fontStyle:"bold"}}]);
 
   doc.autoTable({
     startY: y+4,
     head: [["Earnings","Amount"]],
-    body: [
-      ["Basic Salary","₹"+basicEarned.toLocaleString()],
-      ["OT Amount","₹"+otAmount.toLocaleString()],
-      [{content:"Total Earnings",styles:{fontStyle:"bold"}},{content:"₹"+totalEarnings.toLocaleString(),styles:{fontStyle:"bold"}}],
-    ],
+    body: earningsBody,
     theme:"grid", headStyles:{fillColor:[22,163,74]}, styles:{fontSize:9},
     margin:{left:14,right:110},
   });
@@ -927,16 +962,20 @@ function buildEmployeeReportPDF(emp, month, year, recs, sal){
   doc.autoTable({
     startY: y+4,
     head: [["Deductions","Amount"]],
-    body: [
-      ["Late/Exit Deduction","₹"+deduction.toLocaleString()],
-      [{content:"Total Deductions",styles:{fontStyle:"bold"}},{content:"₹"+deduction.toLocaleString(),styles:{fontStyle:"bold"}}],
-    ],
+    body: deductionsBody,
     theme:"grid", headStyles:{fillColor:[220,38,38]}, styles:{fontSize:9},
     margin:{left:110,right:14},
   });
   const dY=doc.lastAutoTable.finalY;
 
   y=Math.max(eY,dY)+8;
+
+  if(sal.manual_note){
+    doc.setFontSize(8); doc.setFont(undefined,"italic"); doc.setTextColor(100);
+    doc.text(`Adjustment notes: ${sal.manual_note}`,14,y);
+    doc.setFont(undefined,"normal"); doc.setTextColor(0);
+    y+=6;
+  }
 
   // Net Salary highlight box
   doc.setFillColor(219,234,254);
@@ -1017,6 +1056,8 @@ function showMgrSection(s){
   if(s==="approvals") loadApprovals();
   if(s==="disputes") loadDisputes();
   if(s==="attendance") loadAttAll();
+  if(s==="overview") loadOverview();
+  if(s==="employees") loadEmployees();
 }
 async function loadDisputes(){
   const status=document.getElementById("dispFilter")?document.getElementById("dispFilter").value:"pending";
@@ -1096,18 +1137,23 @@ async function loadOverview(){
   try{
     const ist=new Date(Date.now()+5.5*60*60*1000);
     const today=ist.toISOString().split("T")[0];
-    const [att,emps]=await Promise.all([
+    const [att,emps,appr]=await Promise.all([
       fetch("/api/attendance?date="+today).then(r=>r.json()),
       fetch("/api/employees").then(r=>r.json()),
+      fetch("/api/approvals?status=pending").then(r=>r.json()).catch(()=>({approvals:[]})),
     ]);
     const present=att.attendance||[];
     const absent=att.absent||[];
     const late=present.filter(a=>a.checkin_status==="late_deduct"||a.checkin_status==="manager_zone");
     const total=(emps.employees||[]).length;
+    const pending=(appr.approvals||[]).length;
+    const otToday=present.reduce((sum,r)=>sum+parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0),0);
     document.getElementById("ovPresent").textContent=present.length;
     document.getElementById("ovAbsent").textContent=absent.length;
     document.getElementById("ovLate").textContent=late.length;
     document.getElementById("ovTotal").textContent=total;
+    document.getElementById("ovPending").textContent=pending;
+    document.getElementById("ovOTToday").textContent=(Math.round(otToday*100)/100)+"h";
     let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Employee</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr>`;
     [...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(r=>{
       const ok=r.status==="present";
@@ -1173,9 +1219,25 @@ async function editEmp(id){
     document.getElementById("fTgId").value=e.telegram_user_id||"";
   }catch(e){showToast("Error: "+e.message,"err");}
 }
+async function generateNextEmpId(){
+  try{
+    const res=await fetch("/api/employees");
+    const d=await res.json();
+    const emps=d.employees||[];
+    let maxNum=0;
+    emps.forEach(e=>{
+      const m=/^EMP-(\d+)$/.exec((e.employee_id||"").toUpperCase());
+      if(m) maxNum=Math.max(maxNum, parseInt(m[1]));
+    });
+    return "EMP-"+String(maxNum+1).padStart(3,"0");
+  }catch(e){
+    return "EMP-"+Date.now().toString().slice(-3); // fallback if the lookup itself fails
+  }
+}
 async function saveEmployee(){
   const editId=document.getElementById("editEmpId").value;
-  const empId=document.getElementById("fEmpId").value.trim().toUpperCase()||("EMP-"+Date.now().toString().slice(-3));
+  const empIdInput=document.getElementById("fEmpId").value.trim().toUpperCase();
+  const empId=editId?editId:(empIdInput||await generateNextEmpId());
   const name=document.getElementById("fName").value.trim();
   const pwd=document.getElementById("fPassword").value.trim();
   if(!name){showToast("Name required!","err");return;}
@@ -1184,14 +1246,22 @@ async function saveEmployee(){
     const otRate=otAuto?null:(parseFloat(document.getElementById("fOT").value)||50);
     if(editId){
       const body={employee_id:editId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:otRate,status:"active"};
-      await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      if(pwd){await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body,password:pwd})});}
+      let res=await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      let d=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(d.error||"Update failed");
+      if(pwd){
+        res=await fetch("/api/employees",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body,password:pwd})});
+        d=await res.json().catch(()=>({}));
+        if(!res.ok) throw new Error(d.error||"Password update failed");
+      }
       showToast("Employee updated!","ok");
     }else{
       if(!pwd){showToast("Password required for new employee!","err");return;}
       const body={employee_id:empId,telegram_user_id:document.getElementById("fTgId").value.trim()||null,name,password:pwd,phone:document.getElementById("fPhone").value.trim(),department:document.getElementById("fDept").value.trim(),designation:document.getElementById("fDesig").value.trim(),joining_date:document.getElementById("fJoin").value,basic_salary:parseFloat(document.getElementById("fSalary").value)||15000,ot_rate_per_hour:otRate};
-      await fetch("/api/employees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      showToast("Employee added!","ok");
+      const res=await fetch("/api/employees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(d.error||"Could not add employee (ID may already exist — try again)");
+      showToast(`Employee added! ID: ${empId}`,"ok");
     }
     hideAddEmp();
     loadEmployees();
@@ -1211,12 +1281,46 @@ async function populateEmpDropdown(){
     const res=await fetch("/api/employees");
     const d=await res.json();
     const sel=document.getElementById("manualEmpId");
-    if(!sel)return;
-    sel.innerHTML='<option value="">-- Select Employee --</option>';
-    (d.employees||[]).forEach(e=>{
-      sel.innerHTML+=`<option value="${e.employee_id}">${e.name} (${e.employee_id})</option>`;
-    });
+    const filt=document.getElementById("attEmpFilter");
+    const adj=document.getElementById("salAdjEmpId");
+    if(sel){
+      sel.innerHTML='<option value="">-- Select Employee --</option>';
+      (d.employees||[]).forEach(e=>{
+        sel.innerHTML+=`<option value="${e.employee_id}">${e.name} (${e.employee_id})</option>`;
+      });
+    }
+    if(filt){
+      filt.innerHTML='<option value="">All Employees</option>';
+      (d.employees||[]).forEach(e=>{
+        filt.innerHTML+=`<option value="${e.employee_id}">${e.name}</option>`;
+      });
+    }
+    if(adj){
+      adj.innerHTML='<option value="">-- Select Employee --</option>';
+      (d.employees||[]).forEach(e=>{
+        adj.innerHTML+=`<option value="${e.employee_id}">${e.name} (${e.employee_id})</option>`;
+      });
+    }
   }catch(e){}
+}
+async function addSalaryAdjustment(){
+  const empId=document.getElementById("salAdjEmpId").value;
+  const type=document.getElementById("salAdjType").value;
+  const amount=parseFloat(document.getElementById("salAdjAmount").value);
+  const note=document.getElementById("salAdjNote").value.trim();
+  if(!empId){showToast("Select an employee!","err");return;}
+  if(!amount||amount<=0){showToast("Enter a valid amount!","err");return;}
+  const month=document.getElementById("mgrSalMonth").value;
+  const year=document.getElementById("mgrSalYear").value;
+  try{
+    const res=await fetch("/api/salary",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:empId,month,year,type,amount,note})});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.error||"Failed");
+    showToast(d.message,"ok");
+    document.getElementById("salAdjAmount").value="";
+    document.getElementById("salAdjNote").value="";
+    loadSalAll();
+  }catch(e){showToast("Error: "+e.message,"err");}
 }
 
 async function saveManualAttendance(){
@@ -1291,9 +1395,11 @@ async function saveManualAttendance(){
 async function loadAttAll(){
   const date=document.getElementById("attDate").value;
   if(!date){showToast("Select a date!","err");return;}
+  const empFilter=document.getElementById("attEmpFilter")?document.getElementById("attEmpFilter").value:"";
   document.getElementById("attTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>Loading...</p>";
   try{
-    const res=await fetch("/api/attendance?date="+date);
+    const url="/api/attendance?date="+date+(empFilter?"&employee_id="+empFilter:"");
+    const res=await fetch(url);
     const d=await res.json();
     const present=d.attendance||[];
     const absent=d.absent||[];
