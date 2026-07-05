@@ -78,7 +78,7 @@ async function allSalary(req, res) {
   const year  = parseInt(req.query?.year)  || ist.getUTCFullYear();
 
   const emps = await dbQuery(
-    "SELECT employee_id,name,department,designation,basic_salary,ot_rate_per_hour FROM employees WHERE status='active' ORDER BY name"
+    "SELECT employee_id,name,department,designation,joining_date,basic_salary,ot_rate_per_hour FROM employees WHERE status='active' ORDER BY name"
   );
 
   const salRows = await dbQuery(
