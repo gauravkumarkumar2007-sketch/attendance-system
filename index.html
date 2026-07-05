@@ -118,6 +118,15 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 .page{display:none}
 .page.active{display:block}
 .history-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-dow{text-align:center;font-size:10px;font-weight:700;color:var(--subtext);padding-bottom:4px}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:600;color:#fff}
+.cal-day.cal-blank{background:transparent}
+.cal-day.cal-future{background:var(--gray);color:var(--subtext)}
+.cal-day.cal-present{background:var(--green)}
+.cal-day.cal-absent{background:var(--red)}
+.cal-day.cal-late{background:#f59e0b}
+.cal-day.cal-ot{background:var(--mid-blue)}
 .history-item:last-child{border-bottom:none}
 .h-day{font-size:20px;font-weight:700;color:var(--dark-blue)}
 .h-mon{font-size:10px;color:var(--subtext)}
@@ -269,6 +278,13 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
         <button class="action-btn" style="background:var(--mid-blue)" id="rptBtn" onclick="downloadReportPDF()">📄 Download PDF Report</button>
       </div>
       <div class="card">
+        <div class="card-title">📅 Calendar View</div>
+        <div id="histCalendar"><p style="text-align:center;color:var(--subtext);padding:20px">⏳ Loading...</p></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--subtext)">
+          <span>🟩 Present</span><span>🟥 Absent</span><span>🟨 Late</span><span>🟦 OT Day</span>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title">Attendance History</div>
         <div id="histList"><p style="text-align:center;color:var(--subtext);padding:20px">⏳ Loading...</p></div>
       </div>
@@ -317,6 +333,7 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
     <button class="mgr-tab" onclick="showMgrSection('attendance')">📅 Attendance</button>
     <button class="mgr-tab" onclick="showMgrSection('approvals')">⚠️ Approvals <span id="apprBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
     <button class="mgr-tab" onclick="showMgrSection('salary')">💰 Salary</button>
+    <button class="mgr-tab" onclick="showMgrSection('holidays')">🎉 Holidays</button>
     <button class="mgr-tab" onclick="showMgrSection('disputes')">⚠️ Disputes <span id="dispBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
     <button class="mgr-tab" onclick="showMgrSection('settings')">⚙️ Settings</button>
   </div>
@@ -416,8 +433,17 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select>
         <input type="number" id="mgrSalYear" value="2026" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;width:90px"/>
+        <select id="salDeptFilter" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none" onchange="renderSalTable()">
+          <option value="">All Departments</option>
+        </select>
         <button class="mgr-btn-primary" onclick="loadSalAll()" style="margin-top:0">View</button>
         <button class="mgr-btn-success" onclick="downloadAllSalaryPDF()" style="margin-top:0" id="rptAllBtn">📄 Download All (PDF)</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <select id="salYearlyEmpId" style="border:2px solid #e2e8f0;border-radius:10px;padding:10px;font-size:14px;outline:none;max-width:220px">
+          <option value="">-- Select Employee for Yearly Report --</option>
+        </select>
+        <button class="mgr-btn-success" onclick="downloadYearlyPDF()" id="rptYearlyBtn">📅 Yearly Report (PDF)</button>
       </div>
       <div id="salTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select month to view</p></div>
       <div class="card" style="margin-top:16px">
@@ -428,11 +454,12 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
             <option value="">-- Select Employee --</option>
           </select>
           <label>Type</label>
-          <select id="salAdjType" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none">
+          <select id="salAdjType" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none" onchange="toggleSalAdjLabel()">
             <option value="bonus">Bonus (+)</option>
             <option value="deduction">Deduction (-)</option>
+            <option value="override">Override Net Salary (set exact amount)</option>
           </select>
-          <label>Amount (₹)</label>
+          <label id="salAdjAmountLabel">Amount (₹)</label>
           <input type="number" id="salAdjAmount" placeholder="500"/>
           <label>Note (optional)</label>
           <input type="text" id="salAdjNote" placeholder="e.g. Diwali bonus / late fine"/>
@@ -440,6 +467,28 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <button class="action-btn" style="background:var(--mid-blue);margin-top:14px" onclick="addSalaryAdjustment()">Add</button>
         </div>
       </div>
+    </div>
+    <div class="mgr-section" id="mgr-holidays">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">🎉 Add Holiday</div>
+        <div class="mgr-form">
+          <label>Date</label>
+          <input type="date" id="holDate"/>
+          <label>Name</label>
+          <input type="text" id="holName" placeholder="e.g. Diwali"/>
+          <label>Type</label>
+          <select id="holType" style="width:100%;border:2px solid #e2e8f0;border-radius:10px;padding:11px;font-size:14px;outline:none">
+            <option value="public">Public Holiday</option>
+            <option value="company">Company Holiday</option>
+          </select>
+          <label>OT Multiplier</label>
+          <input type="number" id="holMultiplier" value="2.0" step="0.5" placeholder="2.0"/>
+          <p style="font-size:11px;color:var(--subtext);margin-top:4px">2.0 = double OT rate on this day (default). Change only for special cases.</p>
+          <input type="hidden" id="editHolId"/>
+          <button class="action-btn" style="background:var(--mid-blue);margin-top:14px" onclick="saveHoliday()">Add Holiday</button>
+        </div>
+      </div>
+      <div id="holidaysTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
     </div>
     <div class="mgr-section" id="mgr-disputes">
       <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -468,6 +517,8 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
           <label>Cooling Period End / OT Start (HH:MM)</label><input type="text" id="sCoolEnd" placeholder="18:10"/>
           <label>Telegram Group Chat ID</label><input type="text" id="sTgGroup" placeholder="-1001234567890"/>
           <p style="font-size:11px;color:var(--subtext);margin-top:-8px;margin-bottom:10px">💡 Har checkout ki report is group mein bhi jayegi. Har employee ko apni report unke apne Telegram par milegi (unka Telegram ID pehle se save hai).</p>
+          <label>Selfie Auto-Delete (Days)</label><input type="number" id="sSelfieDays" placeholder="30"/>
+          <p style="font-size:11px;color:var(--subtext);margin-top:-8px;margin-bottom:10px">💡 Itne din purani selfies apne aap DB se hat jayengi (space bachane ke liye)</p>
           <p style="font-size:11px;color:var(--subtext);margin-top:10px">💡 OT rate har employee ka alag hota hai — Employees tab mein set karo</p>
         </div>
         <button class="mgr-btn-primary" onclick="saveSettings()">Save Settings</button>
@@ -839,10 +890,42 @@ function showSuccessWithLogout(icon,title,time,det){
   },1000);
 }
 function manualLogout(){if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}closeModal("successModal");doLogout();}
+function renderCalendar(recs, month, year, today){
+  const recMap={};
+  recs.forEach(r=>{ recMap[r.date]=r; });
+  const daysInMonth=new Date(year,month,0).getDate();
+  const firstDow=new Date(year,month-1,1).getDay();
+  const joined=EMP&&EMP.joined?EMP.joined:null;
+  const dowLabels=["S","M","T","W","T","F","S"];
+
+  let html='<div class="cal-grid">';
+  dowLabels.forEach(d=>html+=`<div class="cal-dow">${d}</div>`);
+  for(let i=0;i<firstDow;i++) html+='<div class="cal-day cal-blank"></div>';
+
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    let cls="cal-future";
+    if(dateStr<=today && (!joined || dateStr>=joined)){
+      const r=recMap[dateStr];
+      if(!r || r.status==="absent"){
+        cls="cal-absent";
+      }else{
+        const isLate=r.checkin_status==="manager_zone"||r.checkin_status==="late_deduct";
+        const hasOT=(parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0))>0;
+        cls = isLate ? "cal-late" : (hasOT ? "cal-ot" : "cal-present");
+      }
+    }
+    html+=`<div class="cal-day ${cls}">${day}</div>`;
+  }
+  html+='</div>';
+  document.getElementById("histCalendar").innerHTML=html;
+}
+
 async function loadHistory(){
   if(!EMP)return;
   const now=new Date(Date.now()+5.5*60*60*1000);
   const month=now.getUTCMonth()+1,year=now.getUTCFullYear();
+  const today=now.toISOString().split("T")[0];
   const MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const mName=MONS[now.getUTCMonth()]+" "+year;
   document.getElementById("histTitle").textContent="This Month ("+mName+")";
@@ -853,15 +936,16 @@ async function loadHistory(){
   }
   try{
     const [a,s]=await Promise.all([
-      fetch("/api/attendance?employee_id="+EMP.id).then(r=>r.json()),
+      fetch(`/api/attendance?employee_id=${EMP.id}&month=${month}&year=${year}`).then(r=>r.json()),
       fetch("/api/salary?employee_id="+EMP.id+"&month="+month+"&year="+year).then(r=>r.json()),
     ]);
     const recs=a.attendance||[];
+    renderCalendar(recs, month, year, today);
     if(!recs.length){
       document.getElementById("histList").innerHTML='<p style="text-align:center;color:var(--subtext);padding:20px">No records yet</p>';
     }else{
       let html="";
-      recs.forEach(r=>{
+      recs.slice().sort((x,y)=>(x.date<y.date?1:-1)).forEach(r=>{
         const ok=r.status==="present";
         const dt=new Date((r.date||"2026-01-01")+"T00:00:00Z");
         const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
@@ -1058,6 +1142,63 @@ function showMgrSection(s){
   if(s==="attendance") loadAttAll();
   if(s==="overview") loadOverview();
   if(s==="employees") loadEmployees();
+  if(s==="holidays") loadHolidays();
+}
+async function loadHolidays(){
+  document.getElementById("holidaysTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>Loading...</p>";
+  try{
+    const res=await fetch("/api/holidays");
+    const d=await res.json();
+    const hols=(d.holidays||[]).slice().sort((a,b)=>(a.date>b.date?1:-1));
+    if(!hols.length){
+      document.getElementById("holidaysTable").innerHTML="<p style='text-align:center;padding:20px;color:var(--subtext)'>No holidays added yet</p>";
+      return;
+    }
+    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Date</th><th>Name</th><th>Type</th><th>OT Multiplier</th><th>Action</th></tr>`;
+    hols.forEach(h=>{
+      html+=`<tr><td>${h.date}</td><td><b>${h.name}</b></td><td>${h.type==="company"?"Company":"Public"}</td><td>${h.ot_multiplier}x</td><td><button class="mgr-btn-success" onclick='editHoliday(${JSON.stringify(h)})'>Edit</button> <button class="mgr-btn-danger" onclick="deleteHoliday(${h.id},'${h.name.replace(/'/g,"")}')">Delete</button></td></tr>`;
+    });
+    html+="</table></div>";
+    document.getElementById("holidaysTable").innerHTML=html;
+  }catch(e){document.getElementById("holidaysTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+function editHoliday(h){
+  document.getElementById("editHolId").value=h.id;
+  document.getElementById("holDate").value=h.date;
+  document.getElementById("holName").value=h.name;
+  document.getElementById("holType").value=h.type||"public";
+  document.getElementById("holMultiplier").value=h.ot_multiplier||2.0;
+}
+async function saveHoliday(){
+  const id=document.getElementById("editHolId").value;
+  const date=document.getElementById("holDate").value;
+  const name=document.getElementById("holName").value.trim();
+  const type=document.getElementById("holType").value;
+  const ot_multiplier=parseFloat(document.getElementById("holMultiplier").value)||2.0;
+  if(!date||!name){showToast("Date and name required!","err");return;}
+  try{
+    const body={id,date,name,type,ot_multiplier};
+    const res=await fetch("/api/holidays",{method:id?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.error||"Failed");
+    showToast(d.message,"ok");
+    document.getElementById("editHolId").value="";
+    document.getElementById("holDate").value="";
+    document.getElementById("holName").value="";
+    document.getElementById("holType").value="public";
+    document.getElementById("holMultiplier").value="2.0";
+    loadHolidays();
+  }catch(e){showToast("Error: "+e.message,"err");}
+}
+async function deleteHoliday(id,name){
+  if(!confirm(`Delete holiday "${name}"?`))return;
+  try{
+    const res=await fetch("/api/holidays",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.error||"Failed");
+    showToast("Holiday deleted!","ok");
+    loadHolidays();
+  }catch(e){showToast("Error: "+e.message,"err");}
 }
 async function loadDisputes(){
   const status=document.getElementById("dispFilter")?document.getElementById("dispFilter").value:"pending";
@@ -1283,6 +1424,7 @@ async function populateEmpDropdown(){
     const sel=document.getElementById("manualEmpId");
     const filt=document.getElementById("attEmpFilter");
     const adj=document.getElementById("salAdjEmpId");
+    const yearly=document.getElementById("salYearlyEmpId");
     if(sel){
       sel.innerHTML='<option value="">-- Select Employee --</option>';
       (d.employees||[]).forEach(e=>{
@@ -1301,7 +1443,17 @@ async function populateEmpDropdown(){
         adj.innerHTML+=`<option value="${e.employee_id}">${e.name} (${e.employee_id})</option>`;
       });
     }
+    if(yearly){
+      yearly.innerHTML='<option value="">-- Select Employee for Yearly Report --</option>';
+      (d.employees||[]).forEach(e=>{
+        yearly.innerHTML+=`<option value="${e.employee_id}">${e.name} (${e.employee_id})</option>`;
+      });
+    }
   }catch(e){}
+}
+function toggleSalAdjLabel(){
+  const type=document.getElementById("salAdjType").value;
+  document.getElementById("salAdjAmountLabel").textContent = type==="override" ? "New Net Salary (₹)" : "Amount (₹)";
 }
 async function addSalaryAdjustment(){
   const empId=document.getElementById("salAdjEmpId").value;
@@ -1309,7 +1461,8 @@ async function addSalaryAdjustment(){
   const amount=parseFloat(document.getElementById("salAdjAmount").value);
   const note=document.getElementById("salAdjNote").value.trim();
   if(!empId){showToast("Select an employee!","err");return;}
-  if(!amount||amount<=0){showToast("Enter a valid amount!","err");return;}
+  if(isNaN(amount)||(type!=="override"&&amount<=0)){showToast("Enter a valid amount!","err");return;}
+  if(type==="override"&&!confirm(`Net salary ko seedha ₹${amount} set kar doge — pakka? Ye purane calculation ko override kar dega.`))return;
   const month=document.getElementById("mgrSalMonth").value;
   const year=document.getElementById("mgrSalYear").value;
   try{
@@ -1458,19 +1611,33 @@ async function loadSalAll(){
     const d=await res.json();
     const emps=d.employees||[];
     lastSalAllData={emps,month:parseInt(month),year:parseInt(year)};
-    let totalNet=0;
-    let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Present</th><th>OT Rate</th><th>OT Hours</th><th>Basic</th><th>OT Amt</th><th>Deductions</th><th>Net Salary</th><th>Report</th></tr>`;
-    emps.forEach(e=>{
-      const net=parseFloat(e.net_salary||0);
-      totalNet+=net;
-      const ot=(parseFloat(e.early_ot_hours||0)+parseFloat(e.late_ot_hours||0)).toFixed(1);
-      const otRateLabel="₹"+e.effective_ot_rate+(e.ot_rate_mode==="auto"?" (auto)":"");
-      html+=`<tr><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>${e.total_present||0}</td><td>${otRateLabel}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td><td><button class="mgr-btn-success" onclick="downloadEmployeePDFForManager('${e.employee_id}')">📄 PDF</button></td></tr>`;
-    });
-    html+=`<tr style="background:var(--gray);font-weight:700"><td colspan="8">Total Salary Payable</td><td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td><td></td></tr>`;
-    html+="</table></div>";
-    document.getElementById("salTable").innerHTML=html;
+
+    // Populate department filter with unique departments seen in this data
+    const deptSel=document.getElementById("salDeptFilter");
+    const currentDept=deptSel.value;
+    const depts=[...new Set(emps.map(e=>e.department).filter(Boolean))].sort();
+    deptSel.innerHTML='<option value="">All Departments</option>'+depts.map(dp=>`<option value="${dp}">${dp}</option>`).join("");
+    if(depts.includes(currentDept)) deptSel.value=currentDept;
+
+    renderSalTable();
   }catch(e){document.getElementById("salTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+function renderSalTable(){
+  if(!lastSalAllData)return;
+  const deptFilter=document.getElementById("salDeptFilter").value;
+  const emps=lastSalAllData.emps.filter(e=>!deptFilter||e.department===deptFilter);
+  let totalNet=0;
+  let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Present</th><th>OT Rate</th><th>OT Hours</th><th>Basic</th><th>OT Amt</th><th>Deductions</th><th>Net Salary</th><th>Report</th></tr>`;
+  emps.forEach(e=>{
+    const net=parseFloat(e.net_salary||0);
+    totalNet+=net;
+    const ot=(parseFloat(e.early_ot_hours||0)+parseFloat(e.late_ot_hours||0)).toFixed(1);
+    const otRateLabel="₹"+e.effective_ot_rate+(e.ot_rate_mode==="auto"?" (auto)":"");
+    html+=`<tr><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>${e.total_present||0}</td><td>${otRateLabel}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td><td><button class="mgr-btn-success" onclick="downloadEmployeePDFForManager('${e.employee_id}')">📄 PDF</button></td></tr>`;
+  });
+  html+=`<tr style="background:var(--gray);font-weight:700"><td colspan="8">Total Salary Payable</td><td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td><td></td></tr>`;
+  html+="</table></div>";
+  document.getElementById("salTable").innerHTML=html;
 }
 async function downloadAllSalaryPDF(){
   if(!lastSalAllData||!lastSalAllData.emps.length){showToast("Pehle 'View' click karke data load karo!","err");return;}
@@ -1478,7 +1645,9 @@ async function downloadAllSalaryPDF(){
   const orig=btn.textContent;
   btn.disabled=true; btn.textContent="Generating...";
   try{
-    const {emps,month,year}=lastSalAllData;
+    const deptFilter=document.getElementById("salDeptFilter").value;
+    const {month,year}=lastSalAllData;
+    const emps=lastSalAllData.emps.filter(e=>!deptFilter||e.department===deptFilter);
     const { jsPDF } = window.jspdf;
     const doc=new jsPDF({orientation:"landscape"});
     const pageWidth=doc.internal.pageSize.getWidth();
@@ -1547,6 +1716,77 @@ async function downloadEmployeePDFForManager(empId){
     showToast("Error generating report: "+e.message,"err");
   }
 }
+async function downloadYearlyPDF(){
+  const empId=document.getElementById("salYearlyEmpId").value;
+  if(!empId){showToast("Select an employee first!","err");return;}
+  const year=parseInt(document.getElementById("mgrSalYear").value)||new Date().getFullYear();
+  const btn=document.getElementById("rptYearlyBtn");
+  const orig=btn.textContent;
+  btn.disabled=true; btn.textContent="Generating...";
+  try{
+    const empRes=await fetch(`/api/employees?id=${empId}`).then(r=>r.json());
+    const emp=(empRes.employees||[])[0];
+    if(!emp){throw new Error("Employee not found");}
+
+    const monthPromises=[];
+    for(let m=1;m<=12;m++){
+      monthPromises.push(fetch(`/api/salary?employee_id=${empId}&month=${m}&year=${year}`).then(r=>r.json()));
+    }
+    const monthResults=await Promise.all(monthPromises);
+
+    const { jsPDF } = window.jspdf;
+    const doc=new jsPDF();
+    const pageWidth=doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(26,58,92);
+    doc.rect(0,0,pageWidth,28,"F");
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(16); doc.setFont(undefined,"bold");
+    doc.text("Yearly Salary Report",14,15);
+    doc.setFontSize(10); doc.setFont(undefined,"normal");
+    doc.text(`${emp.name} (${emp.employee_id}) — ${year}`,14,23);
+    doc.setTextColor(0,0,0);
+
+    let totalPresent=0,totalAbsent=0,totalBasic=0,totalOT=0,totalDeduct=0,totalBonus=0,totalNet=0;
+    const rows=monthResults.map((r,i)=>{
+      const s=r.salary||{};
+      const present=parseInt(s.total_present||0), absent=parseInt(s.total_absent||0);
+      const basic=Math.round(parseFloat(s.basic_earned||0));
+      const otAmt=Math.round(parseFloat(s.normal_ot_amount||0));
+      const deduct=Math.round(parseFloat(s.late_deduction||0))+Math.round(parseFloat(s.manual_deduction||0));
+      const bonus=Math.round(parseFloat(s.manual_bonus||0));
+      const net=Math.round(parseFloat(s.net_salary||0));
+      totalPresent+=present; totalAbsent+=absent; totalBasic+=basic; totalOT+=otAmt; totalDeduct+=deduct; totalBonus+=bonus; totalNet+=net;
+      return [REPORT_MONS3[i], present, absent, "₹"+basic.toLocaleString(), "₹"+otAmt.toLocaleString(), "₹"+deduct.toLocaleString(), "₹"+bonus.toLocaleString(), "₹"+net.toLocaleString()];
+    });
+    rows.push([{content:"TOTAL",styles:{fontStyle:"bold"}},
+      {content:String(totalPresent),styles:{fontStyle:"bold"}},
+      {content:String(totalAbsent),styles:{fontStyle:"bold"}},
+      {content:"₹"+totalBasic.toLocaleString(),styles:{fontStyle:"bold"}},
+      {content:"₹"+totalOT.toLocaleString(),styles:{fontStyle:"bold"}},
+      {content:"₹"+totalDeduct.toLocaleString(),styles:{fontStyle:"bold"}},
+      {content:"₹"+totalBonus.toLocaleString(),styles:{fontStyle:"bold"}},
+      {content:"₹"+totalNet.toLocaleString(),styles:{fontStyle:"bold",textColor:[22,163,74]}}]);
+
+    doc.autoTable({
+      startY: 34,
+      head: [["Month","Present","Absent","Basic","OT Amount","Deductions","Bonus","Net Salary"]],
+      body: rows,
+      theme: "grid",
+      headStyles: { fillColor: [26,58,92] },
+      styles: { fontSize: 9 },
+    });
+
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text(`Generated on ${new Date().toLocaleString()}`,14,doc.internal.pageSize.getHeight()-8);
+
+    doc.save(`${emp.name.replace(/\s+/g,"_")}_Yearly_${year}_Report.pdf`);
+  }catch(e){
+    showToast("Error generating report: "+e.message,"err");
+  }finally{
+    btn.disabled=false; btn.textContent=orig;
+  }
+}
 async function loadSettings(){
   try{
     const res=await fetch("/api/settings");
@@ -1564,6 +1804,7 @@ async function loadSettings(){
     document.getElementById("sCoolStart").value=s.cooling_start||"17:50";
     document.getElementById("sCoolEnd").value=s.cooling_end||"18:10";
     document.getElementById("sTgGroup").value=s.telegram_group_chat_id||"";
+    document.getElementById("sSelfieDays").value=s.auto_delete_selfie_days||"30";
   }catch(e){}
 }
 async function saveSettings(){
@@ -1583,6 +1824,7 @@ async function saveSettings(){
     cooling_start:document.getElementById("sCoolStart").value,
     cooling_end:document.getElementById("sCoolEnd").value,
     telegram_group_chat_id:document.getElementById("sTgGroup").value,
+    auto_delete_selfie_days:document.getElementById("sSelfieDays").value,
   };
   try{
     const res=await fetch("/api/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
