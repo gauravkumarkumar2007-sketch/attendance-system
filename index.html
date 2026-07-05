@@ -977,120 +977,154 @@ async function loadHistory(){
 const REPORT_MONS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const REPORT_MONS3=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-// emp = {id,name,dept,desig,otRate,otMode}. Returns a jsPDF doc — caller decides the filename & calls doc.save().
-function buildEmployeeReportPDF(emp, month, year, recs, sal){
+// emp = {id,name,dept,desig,otRate,otMode,basic,joined}. companyName is optional (falls back to a default).
+// Returns a jsPDF doc — caller decides the filename & calls doc.save().
+function buildEmployeeReportPDF(emp, month, year, recs, sal, companyName){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
+  const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const company = companyName || "Labour Attendance Manager";
+  let y = 15;
 
-  // Header band
-  doc.setFillColor(26,58,92);
-  doc.rect(0,0,pageWidth,30,"F");
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(18); doc.setFont(undefined,"bold");
-  doc.text("Attendance & Salary Report",14,17);
+  // ── Header ──
+  doc.setFontSize(14); doc.setFont(undefined,"bold");
+  doc.text(company, 14, y); y+=6;
   doc.setFontSize(11); doc.setFont(undefined,"normal");
-  doc.text(`${REPORT_MONS[month-1]} ${year}`,14,25);
-  doc.setTextColor(0,0,0);
+  doc.text("Employee Detail Report", 14, y); y+=6;
+  doc.text(`Period: ${REPORT_MONS[month-1]} ${year}`, 14, y); y+=8;
 
-  // Employee details block (two columns)
-  let y=40;
+  // ── Employee line ──
   doc.setFontSize(12); doc.setFont(undefined,"bold");
-  doc.text("Employee Details",14,y); y+=8;
-  doc.setFontSize(10); doc.setFont(undefined,"normal");
-  doc.text(`Name: ${emp.name}`,14,y); doc.text(`Employee ID: ${emp.id}`,110,y); y+=6;
-  doc.text(`Department: ${emp.dept||"—"}`,14,y); doc.text(`Designation: ${emp.desig||"—"}`,110,y); y+=6;
-  doc.text(`OT Rate: ₹${emp.otRate}/hour${emp.otMode?" ("+emp.otMode+")":""}`,14,y); y+=10;
+  doc.text(`${emp.name} (${emp.id})`, 14, y); y+=6;
+  doc.setFontSize(9); doc.setFont(undefined,"normal"); doc.setTextColor(90);
+  doc.text(`₹${Math.round(emp.basic||0).toLocaleString()}/month | Role: ${emp.desig||"—"} | Joined: ${emp.joined||"—"} | Advance: ₹0`, 14, y);
+  doc.setTextColor(0); y+=9;
 
-  // Attendance summary line
-  const otHoursTotal=(parseFloat(sal.early_ot_hours||0)+parseFloat(sal.late_ot_hours||0)).toFixed(1);
-  doc.setFontSize(12); doc.setFont(undefined,"bold");
-  doc.text("Attendance Summary",14,y); y+=8;
-  doc.setFontSize(10); doc.setFont(undefined,"normal");
-  doc.text(`Present: ${sal.total_present||0} days   |   Absent: ${sal.total_absent||0} days   |   Late: ${sal.total_late||0} days   |   Total OT: ${otHoursTotal}h`,14,y);
+  // ── Compute per-day figures (uses exact checkout snapshot when available,
+  //    falls back to an estimate for manually-entered/not-yet-checked-out days) ──
+  const sortedRecs = (recs||[]).slice().sort((a,b)=>(a.date>b.date?1:-1));
+  const fallbackDailyRate = (emp.basic||0) / 26;
+  let present=0, absent=0;
+  let sumBase=0, sumDeduct=0, sumOT=0, sumOTHours=0;
+  const dayRows = sortedRecs.map(r=>{
+    const dt = new Date((r.date||"")+"T00:00:00Z");
+    const dayName = isNaN(dt) ? "—" : DOW[dt.getUTCDay()];
+    const isPresent = r.status === "present";
+    if (isPresent) present++; else absent++;
+
+    const otHrs = Math.round((parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0))*100)/100;
+    const hasSnapshot = parseFloat(r.earning_total||0) !== 0 || parseFloat(r.earning_basic||0) > 0;
+
+    let base=0, deduct=0, otPay=0;
+    if (isPresent && hasSnapshot) {
+      base = Math.round(parseFloat(r.earning_basic||0));
+      deduct = Math.round(parseFloat(r.earning_deduction||0));
+      otPay = Math.round(parseFloat(r.earning_ot||0));
+    } else if (isPresent) {
+      base = Math.round(fallbackDailyRate); // manually-entered / not checked out yet — best estimate
+    }
+    const total = base - deduct + otPay;
+    if (isPresent) { sumBase+=base; sumDeduct+=deduct; sumOT+=otPay; sumOTHours+=otHrs; }
+
+    return {
+      date: r.date, day: dayName,
+      statusLabel: isPresent ? "P Present" : "A Absent",
+      inT: r.checkin_time || "-", outT: r.checkout_time || "-",
+      otHrs, base, deduct, otPay, total, isLate: r.checkin_status==="manager_zone"||r.checkin_status==="late_deduct",
+    };
+  });
+
+  const markedDays = present+absent;
+  const attendancePct = markedDays>0 ? Math.round((present/markedDays)*1000)/10 : 0;
+  const manualBonus = Math.round(parseFloat(sal.manual_bonus||0));
+  const manualDeduct = Math.round(parseFloat(sal.manual_deduction||0));
+  const totalDeduct = sumDeduct + manualDeduct;
+  const gross = sumBase + sumOT + manualBonus;
+  const netPay = Math.round(parseFloat(sal.net_salary||0));
+
+  // ── Payroll Summary ──
+  doc.setFontSize(11); doc.setFont(undefined,"bold");
+  doc.text("Payroll Summary", 14, y); y+=5;
+  doc.autoTable({
+    startY: y,
+    head: [["P/A/H","Base(₹)","Deduct(₹)","OT Pay(₹)","Gross(₹)","Advance","Net Pay(₹)"]],
+    body: [[`${present}P/${absent}A/0H`, sumBase.toLocaleString(), totalDeduct.toLocaleString(),
+             sumOT.toLocaleString(), gross.toLocaleString(), "0",
+             {content:netPay.toLocaleString(),styles:{fontStyle:"bold",textColor:[22,163,74]}}]],
+    theme:"grid", headStyles:{fillColor:[26,58,92]}, styles:{fontSize:9,halign:"center"},
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // ── Day-by-Day Attendance ──
+  doc.setFontSize(11); doc.setFont(undefined,"bold");
+  doc.text("Day-by-Day Attendance", 14, y); y+=5;
+  doc.autoTable({
+    startY: y,
+    head: [["Date","Day","Status","In","Out","OT hrs","Base","Deduct","OT Pay","Total"]],
+    body: dayRows.length ? dayRows.map(r=>[r.date,r.day,r.statusLabel,r.inT,r.outT,r.otHrs.toFixed(1),r.base,r.deduct,r.otPay,r.total])
+                         : [["No records for this month","—","—","—","—","—","—","—","—","—"]],
+    theme:"striped", headStyles:{fillColor:[26,58,92]}, styles:{fontSize:8}, margin:{left:14,right:14},
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  const ensureSpace = (needed) => {
+    if (y + needed > doc.internal.pageSize.getHeight() - 15) { doc.addPage(); y = 15; }
+  };
+
+  // ── Attendance Summary ──
+  ensureSpace(20);
+  doc.setFontSize(11); doc.setFont(undefined,"bold");
+  doc.text("Attendance Summary", 14, y); y+=6;
+  doc.setFontSize(9); doc.setFont(undefined,"normal");
+  doc.text(`Present: ${present} | Absent: ${absent} | Half Day: 0 | Attendance: ${attendancePct}% | Marked Days: ${markedDays}`, 14, y);
   y+=10;
 
-  // Earnings / Deductions side-by-side
-  doc.setFontSize(12); doc.setFont(undefined,"bold");
-  doc.text("Salary Breakdown",14,y); y+=4;
-
-  const basicEarned=Math.round(parseFloat(sal.basic_earned||0));
-  const otAmount=Math.round(parseFloat(sal.normal_ot_amount||0));
-  const deduction=Math.round(parseFloat(sal.late_deduction||0));
-  const bonus=Math.round(parseFloat(sal.manual_bonus||0));
-  const manualDeduct=Math.round(parseFloat(sal.manual_deduction||0));
-  const totalEarnings=basicEarned+otAmount+bonus;
-  const totalDeductions=deduction+manualDeduct;
-  const netSalary=Math.round(parseFloat(sal.net_salary||0));
-
-  const earningsBody=[
-    ["Basic Salary","₹"+basicEarned.toLocaleString()],
-    ["OT Amount","₹"+otAmount.toLocaleString()],
-  ];
-  if(bonus>0) earningsBody.push(["Manual Bonus","₹"+bonus.toLocaleString()]);
-  earningsBody.push([{content:"Total Earnings",styles:{fontStyle:"bold"}},{content:"₹"+totalEarnings.toLocaleString(),styles:{fontStyle:"bold"}}]);
-
-  const deductionsBody=[["Late/Exit Deduction","₹"+deduction.toLocaleString()]];
-  if(manualDeduct>0) deductionsBody.push(["Manual Deduction","₹"+manualDeduct.toLocaleString()]);
-  deductionsBody.push([{content:"Total Deductions",styles:{fontStyle:"bold"}},{content:"₹"+totalDeductions.toLocaleString(),styles:{fontStyle:"bold"}}]);
-
-  doc.autoTable({
-    startY: y+4,
-    head: [["Earnings","Amount"]],
-    body: earningsBody,
-    theme:"grid", headStyles:{fillColor:[22,163,74]}, styles:{fontSize:9},
-    margin:{left:14,right:110},
-  });
-  const eY=doc.lastAutoTable.finalY;
-
-  doc.autoTable({
-    startY: y+4,
-    head: [["Deductions","Amount"]],
-    body: deductionsBody,
-    theme:"grid", headStyles:{fillColor:[220,38,38]}, styles:{fontSize:9},
-    margin:{left:110,right:14},
-  });
-  const dY=doc.lastAutoTable.finalY;
-
-  y=Math.max(eY,dY)+8;
-
-  if(sal.manual_note){
-    doc.setFontSize(8); doc.setFont(undefined,"italic"); doc.setTextColor(100);
-    doc.text(`Adjustment notes: ${sal.manual_note}`,14,y);
-    doc.setFont(undefined,"normal"); doc.setTextColor(0);
-    y+=6;
+  // ── Late Entry Details ──
+  ensureSpace(20);
+  const lateRows = dayRows.filter(r=>r.isLate);
+  doc.setFontSize(11); doc.setFont(undefined,"bold");
+  doc.text("Late Entry Details", 14, y); y+=6;
+  doc.setFontSize(9); doc.setFont(undefined,"normal");
+  if (!lateRows.length) {
+    doc.text("No late entries in this period.", 14, y); y+=8;
+  } else {
+    doc.autoTable({
+      startY: y,
+      head: [["Date","Day","In","Out"]],
+      body: lateRows.map(r=>[r.date,r.day,r.inT,r.outT]),
+      theme:"grid", headStyles:{fillColor:[217,119,6]}, styles:{fontSize:8}, margin:{left:14,right:14},
+    });
+    y = doc.lastAutoTable.finalY + 8;
   }
 
-  // Net Salary highlight box
-  doc.setFillColor(219,234,254);
-  doc.rect(14,y-6,pageWidth-28,13,"F");
-  doc.setFontSize(13); doc.setFont(undefined,"bold");
-  doc.setTextColor(21,101,52);
-  doc.text(`NET SALARY: ₹${netSalary.toLocaleString()}`,18,y+2.5);
-  doc.setTextColor(0,0,0);
-  y+=18;
+  // ── OT Summary ──
+  ensureSpace(20);
+  const otRows = dayRows.filter(r=>r.otHrs>0);
+  doc.setFontSize(11); doc.setFont(undefined,"bold");
+  doc.text("OT Summary", 14, y); y+=6;
+  doc.setFontSize(9); doc.setFont(undefined,"normal");
+  doc.text(`Total OT Hours: ${sumOTHours.toFixed(2)} | Total OT Pay: ₹${sumOT.toLocaleString()}`, 14, y); y+=5;
+  if (otRows.length) {
+    doc.autoTable({
+      startY: y,
+      head: [["Date","Day","In","Out","OT hrs","OT Pay(₹)"]],
+      body: otRows.map(r=>[r.date,r.day,r.inT,r.outT,r.otHrs.toFixed(1),r.otPay]),
+      theme:"grid", headStyles:{fillColor:[37,99,235]}, styles:{fontSize:8}, margin:{left:14,right:14},
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  }
 
-  // Day-wise attendance
-  doc.setFontSize(12); doc.setFont(undefined,"bold");
-  doc.text("Day-wise Attendance",14,y); y+=4;
+  if (sal.manual_note) {
+    ensureSpace(10);
+    doc.setFontSize(8); doc.setFont(undefined,"italic"); doc.setTextColor(100);
+    doc.text(`Adjustment notes: ${sal.manual_note}`, 14, y);
+    doc.setFont(undefined,"normal"); doc.setTextColor(0);
+  }
 
-  const rows=(recs||[]).map(r=>{
-    const dt=new Date((r.date||"")+"T00:00:00Z");
-    const dayLabel=isNaN(dt)?(r.date||"—"):`${dt.getUTCDate()} ${REPORT_MONS3[dt.getUTCMonth()]}`;
-    const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
-    const ot=(parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0)).toFixed(1);
-    return [dayLabel, r.checkin_time||"—", r.checkout_time||"—", wh, ot+"h", r.status==="present"?"Present":"Absent"];
-  });
-  doc.autoTable({
-    startY: y+4,
-    head: [["Date","Check-in","Check-out","Hours","OT","Status"]],
-    body: rows.length?rows:[["No records for this month","—","—","—","—","—"]],
-    theme:"striped", headStyles:{fillColor:[26,58,92]}, styles:{fontSize:9},
-    margin:{left:14,right:14},
-  });
-
+  // ── Footer ──
   doc.setFontSize(8); doc.setTextColor(150);
-  doc.text(`Generated on ${new Date().toLocaleString()}`,14,doc.internal.pageSize.getHeight()-10);
+  doc.text(`Generated: ${new Date().toLocaleString()} | ${company}`, 14, doc.internal.pageSize.getHeight()-8);
 
   return doc;
 }
@@ -1102,13 +1136,15 @@ async function downloadReportPDF(){
   const year=parseInt(document.getElementById("rptYear").value)||new Date().getFullYear();
   btn.disabled=true; btn.textContent="Generating...";
   try{
-    const [a,s]=await Promise.all([
+    const [a,s,settingsRes]=await Promise.all([
       fetch(`/api/attendance?employee_id=${EMP.id}&month=${month}&year=${year}`).then(r=>r.json()),
       fetch(`/api/salary?employee_id=${EMP.id}&month=${month}&year=${year}`).then(r=>r.json()),
+      fetch("/api/settings").then(r=>r.json()).catch(()=>({settings:{}})),
     ]);
     const recs=(a.attendance||[]).slice().sort((x,y)=>(x.date>y.date?1:-1));
     const sal=s.salary||{};
-    const doc=buildEmployeeReportPDF({id:EMP.id,name:EMP.naam,dept:EMP.dept,desig:EMP.desig,otRate:EMP.otRate,otMode:EMP.otMode}, month, year, recs, sal);
+    const companyName=(settingsRes.settings||{}).company_name;
+    const doc=buildEmployeeReportPDF({id:EMP.id,name:EMP.naam,dept:EMP.dept,desig:EMP.desig,otRate:EMP.otRate,otMode:EMP.otMode,basic:EMP.basic,joined:EMP.joined}, month, year, recs, sal, companyName);
     doc.save(`${EMP.naam.replace(/\s+/g,"_")}_${REPORT_MONS[month-1]}_${year}_Report.pdf`);
   }catch(e){
     showToast("Error generating report: "+e.message,"err");
@@ -1704,12 +1740,16 @@ async function downloadEmployeePDFForManager(empId){
   const empRow=emps.find(e=>e.employee_id===empId);
   if(!empRow){showToast("Employee data not found!","err");return;}
   try{
-    const a=await fetch(`/api/attendance?employee_id=${empId}&month=${month}&year=${year}`).then(r=>r.json());
+    const [a,settingsRes]=await Promise.all([
+      fetch(`/api/attendance?employee_id=${empId}&month=${month}&year=${year}`).then(r=>r.json()),
+      fetch("/api/settings").then(r=>r.json()).catch(()=>({settings:{}})),
+    ]);
     const recs=(a.attendance||[]).slice().sort((x,y)=>(x.date>y.date?1:-1));
+    const companyName=(settingsRes.settings||{}).company_name;
     const doc=buildEmployeeReportPDF(
       {id:empId, name:empRow.name, dept:empRow.department, desig:empRow.designation||"—",
-       otRate:empRow.effective_ot_rate, otMode:empRow.ot_rate_mode},
-      month, year, recs, empRow
+       otRate:empRow.effective_ot_rate, otMode:empRow.ot_rate_mode, basic:empRow.basic_salary, joined:empRow.joining_date},
+      month, year, recs, empRow, companyName
     );
     doc.save(`${empRow.name.replace(/\s+/g,"_")}_${REPORT_MONS[month-1]}_${year}_Report.pdf`);
   }catch(e){
