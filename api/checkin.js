@@ -155,9 +155,9 @@ module.exports = async function handler(req, res) {
     const earlyOT = zone === "early_ot"    ? Math.max(0, (600 - nowMins) / 60) : 0;
     const deduct  = zone === "late_deduct" ? Math.max(0, (nowMins - 600) / 60) : 0;
     const isSun   = day === 0 ? 1 : 0;
-    const hol     = await dbQuery("SELECT id FROM holidays WHERE date=?", [today]);
+    const hol     = await dbQuery("SELECT ot_multiplier FROM holidays WHERE date=?", [today]);
     const isHol   = hol.length ? 1 : 0;
-    const otMul   = (isSun || isHol) ? 2.0 : 1.0;
+    const otMul   = isHol ? parseFloat(hol[0].ot_multiplier || 2.0) : (isSun ? 2.0 : 1.0);
 
     // Save to DB
     await dbQuery(
@@ -178,6 +178,17 @@ module.exports = async function handler(req, res) {
         [emp.employee_id, today, timeStr]
       );
     }
+
+    // Best-effort cleanup: clear old selfie photos past the retention window.
+    // Runs opportunistically on check-in (which happens daily) — no separate cron/function needed.
+    try {
+      const retainDays = parseInt(s.auto_delete_selfie_days || "30");
+      await dbQuery(
+        `UPDATE attendance SET selfie_base64=NULL, checkout_selfie_base64=NULL
+         WHERE date < date('now', ?) AND (selfie_base64 IS NOT NULL OR checkout_selfie_base64 IS NOT NULL)`,
+        [`-${retainDays} days`]
+      );
+    } catch(e) { /* never fail checkin because of cleanup */ }
 
     res.status(200).json({
       success:       true,
