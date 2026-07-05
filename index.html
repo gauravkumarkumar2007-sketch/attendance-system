@@ -848,7 +848,7 @@ async function doCheckout(){
   btn.className="action-btn btn-off";
   document.getElementById("btnTxt").textContent="Saving...";
   try{
-    const res=await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:EMP.id,selfie_base64:photo||""})});
+    const res=await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:EMP.id,location_lat:locLat,location_lng:locLng,selfie_base64:photo||""})});
     const d=await res.json();
     if(!d.success)throw new Error(d.error||"Check-out failed");
     const wm=Math.round((d.working_hours||0)*60);
