@@ -86,6 +86,7 @@ module.exports = async function handler(req, res) {
     if (req.method==="GET") {
       const rows = await dbQuery("SELECT key,value FROM settings");
       const s    = Object.fromEntries(rows.map(r=>[r.key,r.value]));
+      delete s.manager_password; // never expose this — auth.js reads it directly from the DB for manager login
       return res.status(200).json({success:true, settings:s});
     }
 
