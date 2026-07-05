@@ -59,6 +59,13 @@ function parse12h(t) {
   } catch { return 9*60; }
 }
 
+function getDist(la1, lo1, la2, lo2) {
+  const R = 6371000;
+  const dL = (la2-la1) * Math.PI/180, dl = (lo2-lo1) * Math.PI/180;
+  const a = Math.sin(dL/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dl/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 // Escapes the few characters that matter for Telegram's HTML parse mode.
 function escapeHtml(str) {
   return String(str||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -94,8 +101,12 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST")    return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { employee_id, selfie_base64 = "" } = req.body;
+    const { employee_id, selfie_base64 = "", location_lat, location_lng } = req.body;
     if (!employee_id) return res.status(400).json({ error: "employee_id required" });
+    if (!selfie_base64 || selfie_base64.length < 100)
+      return res.status(400).json({ error: "Selfie is required" });
+    if (location_lat === undefined || location_lat === null || location_lng === undefined || location_lng === null)
+      return res.status(400).json({ error: "Location is required" });
 
     const emps = await dbQuery("SELECT * FROM employees WHERE employee_id=? AND status='active'", [employee_id]);
     if (!emps.length) return res.status(404).json({ error: "Employee not found" });
@@ -103,6 +114,16 @@ module.exports = async function handler(req, res) {
 
     const sRows = await dbQuery("SELECT key,value FROM settings");
     const s = Object.fromEntries(sRows.map(r => [r.key, r.value]));
+
+    // Location check — same office geofence used at check-in.
+    const dist = getDist(
+      parseFloat(location_lat), parseFloat(location_lng),
+      parseFloat(s.office_lat || "28.6139"),
+      parseFloat(s.office_lng || "77.2090")
+    );
+    const radius = parseFloat(s.radius_meters || "100");
+    if (dist > radius)
+      return res.status(400).json({ error: `Too far from office (${Math.round(dist)}m away, max ${radius}m)` });
 
     // month/year now come from getIST() itself, declared before any use below.
     const { today, nowMins, timeStr, month, year, day } = getIST();
