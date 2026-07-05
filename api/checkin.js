@@ -109,6 +109,10 @@ module.exports = async function handler(req, res) {
 
     if (!employee_id)
       return res.status(400).json({ error: "employee_id required" });
+    if (!selfie_base64 || selfie_base64.length < 100)
+      return res.status(400).json({ error: "Selfie is required" });
+    if (location_lat === undefined || location_lat === null || location_lng === undefined || location_lng === null)
+      return res.status(400).json({ error: "Location is required" });
 
     // Get employee
     const emps = await dbQuery(
@@ -133,17 +137,15 @@ module.exports = async function handler(req, res) {
     if (existing.length && existing[0].checkin_time)
       return res.status(400).json({ error: "Already checked in today at " + existing[0].checkin_time });
 
-    // Location check
-    if (location_lat && location_lng) {
-      const dist = getDist(
-        parseFloat(location_lat), parseFloat(location_lng),
-        parseFloat(s.office_lat || "28.6139"),
-        parseFloat(s.office_lng || "77.2090")
-      );
-      const radius = parseFloat(s.radius_meters || "100");
-      if (dist > radius)
-        return res.status(400).json({ error: `Too far from office (${Math.round(dist)}m away, max ${radius}m)` });
-    }
+    // Location check — always enforced now (was previously skippable by omitting location_lat/lng)
+    const dist = getDist(
+      parseFloat(location_lat), parseFloat(location_lng),
+      parseFloat(s.office_lat || "28.6139"),
+      parseFloat(s.office_lng || "77.2090")
+    );
+    const radius = parseFloat(s.radius_meters || "100");
+    if (dist > radius)
+      return res.status(400).json({ error: `Too far from office (${Math.round(dist)}m away, max ${radius}m)` });
 
     // Time zone
     let zone;
