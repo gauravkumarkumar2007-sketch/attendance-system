@@ -105,7 +105,7 @@ module.exports = async function handler(req, res) {
     const s = Object.fromEntries(sRows.map(r => [r.key, r.value]));
 
     // month/year now come from getIST() itself, declared before any use below.
-    const { today, nowMins, timeStr, month, year } = getIST();
+    const { today, nowMins, timeStr, month, year, day } = getIST();
 
     const att = await dbQuery("SELECT * FROM attendance WHERE employee_id=? AND date=?", [emp.employee_id, today]);
     if (!att.length || !att[0].checkin_time) return res.status(400).json({ error: "Not checked in today" });
@@ -193,21 +193,66 @@ module.exports = async function handler(req, res) {
     //    Best-effort — never blocks or fails the checkout itself. ──
     try {
       const otHoursTotal = Math.round((reportedEarlyOT + reportedLateOT) * 100) / 100;
+      const workHoursTotal = Math.round(workMins/60*100)/100;
       const safeName = escapeHtml(emp.name);
+      const safeCompany = escapeHtml(s.company_name || "Attendance System");
+
+      const fmtHM = (hrs) => {
+        const h = Math.floor(hrs), m = Math.round((hrs - h) * 60);
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+      };
+      const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const [yy,mm,dd] = today.split("-");
+      const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const prettyDate = `${parseInt(dd)} ${monthNames[parseInt(mm)-1]} ${yy}, ${dayNames[day]}`;
+
+      const monthOT = Math.round((parseFloat(ms.early_ot_hours||0)+parseFloat(ms.late_ot_hours||0))*100)/100;
+      const monthBasic = Math.round(parseFloat(ms.basic_earned||0));
+      const monthOTAmt = Math.round(parseFloat(ms.normal_ot_amount||0));
+      const monthDeduct = Math.round(parseFloat(ms.late_deduction||0));
+      const monthBonus = Math.round(parseFloat(ms.manual_bonus||0));
+      const monthManualDeduct = Math.round(parseFloat(ms.manual_deduction||0));
+      const monthNet = Math.round(parseFloat(ms.net_salary||0));
+
+      let monthSalaryLines = `Basic: ₹${monthBasic}\nOT: ₹${monthOTAmt}`;
+      if (monthDeduct>0) monthSalaryLines += `\nLate Cut: -₹${monthDeduct}`;
+      if (monthBonus>0) monthSalaryLines += `\nBonus: +₹${monthBonus}`;
+      if (monthManualDeduct>0) monthSalaryLines += `\nDeduction: -₹${monthManualDeduct}`;
+
       const employeeMsg =
-        `✅ <b>Attendance Report</b> — ${today}\n\n` +
-        `Check-in: ${a.checkin_time}\n` +
-        `Check-out: ${timeStr}\n` +
-        `Working Hours: ${Math.round(workMins/60*100)/100}h\n` +
-        `OT Hours: ${otHoursTotal}h\n` +
-        `Today's Earning: ₹${todayEarn}\n\n` +
-        `<b>This Month</b>\n` +
-        `Present: ${ms.total_present||0} | Net Salary: ₹${Math.round(parseFloat(ms.net_salary||0))}`;
+        `🏢 <b>${safeCompany}</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `👤 <b>${safeName}</b> (${emp.employee_id})\n` +
+        `📅 ${prettyDate}\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `🕐 Check-in: ${a.checkin_time}\n` +
+        `🕐 Check-out: ${timeStr}\n` +
+        `⏱️ Working Hours: ${fmtHM(workHoursTotal)}\n` +
+        `⚡ OT Hours: ${fmtHM(otHoursTotal)}\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `💰 <b>Today's Earnings</b>\n` +
+        `Basic/day: ₹${Math.round(reportedDailyRate)}\n` +
+        `OT Amount: ₹${Math.round(reportedOTAmt)}\n` +
+        `──────────────────\n` +
+        `<b>Today Total: ₹${todayEarn}</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `📊 <b>This Month's Summary</b>\n` +
+        `Present: ${ms.total_present||0} days\n` +
+        `Absent: ${ms.total_absent||0} days\n` +
+        `Late: ${ms.total_late||0} days\n` +
+        `OT Hours: ${fmtHM(monthOT)}\n` +
+        `──────────────────\n` +
+        `💵 <b>Month's Total Salary</b>\n` +
+        `${monthSalaryLines}\n` +
+        `──────────────────\n` +
+        `<b>Net Salary: ₹${monthNet} ✅</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `❓ Any issue? Contact your manager.`;
 
       const groupMsg =
         `📋 <b>${safeName}</b> (${emp.employee_id}) checked out\n` +
         `${today} | In: ${a.checkin_time} → Out: ${timeStr}\n` +
-        `Hours: ${Math.round(workMins/60*100)/100}h | OT: ${otHoursTotal}h | Earning: ₹${todayEarn}`;
+        `Hours: ${fmtHM(workHoursTotal)} | OT: ${fmtHM(otHoursTotal)} | Earning: ₹${todayEarn}`;
 
       await Promise.allSettled([
         sendTelegramMessage(emp.telegram_user_id, employeeMsg),
