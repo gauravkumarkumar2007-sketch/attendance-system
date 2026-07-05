@@ -109,24 +109,46 @@ async function allSalary(req, res) {
   res.status(200).json({ success:true, month, year, employees:result });
 }
 
-// ── Manager: add a manual bonus or deduction to an employee's month (PUT) ──
+// ── Manager: add a manual bonus/deduction, or directly override net salary (PUT) ──
 async function adjustSalary(req, res) {
   const { employee_id, month, year, type, amount, note } = req.body || {};
-  if (!employee_id || !month || !year || !type || !amount)
+  if (!employee_id || !month || !year || !type || amount===undefined || amount===null)
     return res.status(400).json({ error: "employee_id, month, year, type, amount required" });
-  if (type !== "bonus" && type !== "deduction")
-    return res.status(400).json({ error: "type must be 'bonus' or 'deduction'" });
-  const amt = Math.abs(parseFloat(amount));
-  if (!amt || amt <= 0) return res.status(400).json({ error: "amount must be a positive number" });
+  if (type !== "bonus" && type !== "deduction" && type !== "override")
+    return res.status(400).json({ error: "type must be 'bonus', 'deduction', or 'override'" });
 
-  const sign = type === "bonus" ? 1 : -1;
   const cleanNote = String(note||"").trim().slice(0,100); // keep notes short
-  const noteLine = `${type==="bonus"?"+":"-"}₹${amt}${cleanNote?" ("+cleanNote+")":""}`;
 
   const existing = await dbQuery(
-    "SELECT manual_note FROM monthly_salary WHERE employee_id=? AND month=? AND year=?",
+    "SELECT manual_note, net_salary FROM monthly_salary WHERE employee_id=? AND month=? AND year=?",
     [employee_id, month, year]
   );
+
+  if (type === "override") {
+    const newVal = parseFloat(amount);
+    if (isNaN(newVal)) return res.status(400).json({ error: "amount must be a number" });
+    const oldVal = existing.length ? parseFloat(existing[0].net_salary||0) : 0;
+    const noteLine = `Override: ₹${oldVal}→₹${newVal}${cleanNote?" ("+cleanNote+")":""}`;
+    if (existing.length) {
+      const combinedNote = (existing[0].manual_note ? existing[0].manual_note+" | " : "") + noteLine;
+      await dbQuery(
+        `UPDATE monthly_salary SET net_salary=?, manual_note=?, updated_at=datetime('now')
+         WHERE employee_id=? AND month=? AND year=?`,
+        [newVal, combinedNote, employee_id, month, year]
+      );
+    } else {
+      await dbQuery(
+        `INSERT INTO monthly_salary(employee_id,month,year,net_salary,manual_note) VALUES(?,?,?,?,?)`,
+        [employee_id, month, year, newVal, noteLine]
+      );
+    }
+    return res.status(200).json({ success:true, message:`Net salary overridden to ₹${newVal}!` });
+  }
+
+  const amt = Math.abs(parseFloat(amount));
+  if (!amt || amt <= 0) return res.status(400).json({ error: "amount must be a positive number" });
+  const sign = type === "bonus" ? 1 : -1;
+  const noteLine = `${type==="bonus"?"+":"-"}₹${amt}${cleanNote?" ("+cleanNote+")":""}`;
 
   if (existing.length) {
     const col = type === "bonus" ? "manual_bonus" : "manual_deduction";
