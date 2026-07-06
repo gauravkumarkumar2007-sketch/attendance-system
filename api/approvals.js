@@ -1,4 +1,8 @@
-// api/approvals.js — Manager approve/reject 10:05-10:30 check-ins
+// api/approvals.js — Manager approves/rejects two kinds of pending check-ins:
+//   type='early_ot'  (before 9:30 AM) — approve grants the OT hours, reject counts as normal time
+//   type='late_zone' (10:05-10:30 AM) — approve waives the deduction, reject applies it
+// If checkout already happened before the manager decides, the monthly_salary ledger
+// is retroactively corrected by the exact delta (see applyDecision()).
 const https = require("https");
 
 function dbQuery(sql, params=[]) {
@@ -42,7 +46,7 @@ module.exports = async function handler(req, res) {
   if(req.method==="OPTIONS") return res.status(200).end();
 
   try {
-    // GET — list pending approvals (or all by status filter)
+    // GET — list approvals by status (includes 'type': 'early_ot' or 'late_zone')
     if (req.method==="GET") {
       const status = req.query?.status || "pending";
       const rows = await dbQuery(
@@ -54,7 +58,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({success:true, approvals:rows});
     }
 
-    // POST — approve or reject
+    // POST — approve or reject (works for both early_ot and late_zone approvals)
     if (req.method==="POST") {
       const b = req.body||{};
       const { employee_id, date, decision, note } = b;
@@ -63,47 +67,38 @@ module.exports = async function handler(req, res) {
       if (decision !== "approved" && decision !== "rejected")
         return res.status(400).json({error:"decision must be approved or rejected"});
 
+      const apprRows = await dbQuery(
+        "SELECT * FROM manager_approvals WHERE employee_id=? AND date=? ORDER BY id DESC LIMIT 1",
+        [employee_id, date]
+      );
+      if (!apprRows.length) return res.status(404).json({error:"No pending approval found for this date"});
+      const type = apprRows[0].type || "late_zone";
+
       const ist = new Date(Date.now()+5.5*60*60*1000);
       const h=ist.getUTCHours(), m=ist.getUTCMinutes();
       const ap=h>=12?"PM":"AM", h12=h%12||12;
       const decidedAt = `${h12}:${String(m).padStart(2,"0")} ${ap}`;
 
-      // Update approval record
       await dbQuery(
         `UPDATE manager_approvals SET decision=?, decided_by='manager', decided_at=?, note=?
          WHERE employee_id=? AND date=?`,
         [decision, decidedAt, note||"", employee_id, date]
       );
 
-      if (decision === "approved") {
-        // No deduction — clear it
-        await dbQuery(
-          `UPDATE attendance SET deduction_hours=0, checkin_status='manager_zone_approved' WHERE employee_id=? AND date=?`,
-          [employee_id, date]
-        );
+      const attRows = await dbQuery("SELECT * FROM attendance WHERE employee_id=? AND date=?", [employee_id, date]);
+      if (!attRows.length) return res.status(200).json({success:true, message:`Check-in ${decision}! (no attendance record to update)`});
+      const a = attRows[0];
+
+      const checkinMins = parse12h(a.checkin_time);
+
+      if (type === "early_ot") {
+        const potentialOT = Math.max(0, (600 - checkinMins) / 60);
+        const desiredOT = decision === "approved" ? potentialOT : 0;
+        await applyDecision(employee_id, date, a, { field:"early_ot_hours", desired:desiredOT, statusSuffix: decision==="approved"?"early_ot_approved":"early_ot_rejected", isDeduction:false });
       } else {
-        // Rejected — apply deduction from 10:00 AM to actual checkin time
-        const attRows = await dbQuery(
-          "SELECT checkin_time FROM attendance WHERE employee_id=? AND date=?",
-          [employee_id, date]
-        );
-        if (attRows.length) {
-          const t = attRows[0].checkin_time;
-          try {
-            const dt = new Date(`2000-01-01 ${t}`);
-            // Parse 12h format manually
-            const parts = t.trim().split(" ");
-            let [hh,mm] = parts[0].split(":").map(Number);
-            if (parts[1]==="PM" && hh!==12) hh+=12;
-            if (parts[1]==="AM" && hh===12) hh=0;
-            const checkinMins = hh*60+mm;
-            const deductHrs = Math.max(0, (checkinMins-600)/60);
-            await dbQuery(
-              `UPDATE attendance SET deduction_hours=?, checkin_status='manager_zone_rejected' WHERE employee_id=? AND date=?`,
-              [deductHrs, employee_id, date]
-            );
-          } catch(e) {}
-        }
+        const potentialDeduct = Math.max(0, (checkinMins - 600) / 60);
+        const desiredDeduct = decision === "rejected" ? potentialDeduct : 0;
+        await applyDecision(employee_id, date, a, { field:"deduction_hours", desired:desiredDeduct, statusSuffix: decision==="approved"?"manager_zone_approved":"manager_zone_rejected", isDeduction:true });
       }
 
       return res.status(200).json({success:true, message:`Check-in ${decision}!`});
@@ -114,3 +109,71 @@ module.exports = async function handler(req, res) {
     res.status(500).json({error:e.message});
   }
 };
+
+// Applies the manager's decision to the attendance row, and — if checkout already
+// happened before the decision was made — retroactively corrects the monthly_salary
+// ledger by exactly the delta, so the employee's pay reflects the decision either way.
+async function applyDecision(employee_id, date, a, { field, desired, statusSuffix, isDeduction }) {
+  const current = parseFloat(a[field] || 0);
+  const deltaHours = desired - current;
+
+  const alreadyCheckedOut = !!a.checkout_time && parseFloat(a.earning_total||0) !== 0;
+
+  if (!alreadyCheckedOut) {
+    // Checkout hasn't happened yet — just update the attendance row.
+    // checkout.js will read this field naturally when it eventually runs.
+    await dbQuery(
+      `UPDATE attendance SET ${field}=?, checkin_status=? WHERE employee_id=? AND date=?`,
+      [desired, statusSuffix, employee_id, date]
+    );
+    return;
+  }
+
+  // Checkout already happened — need the employee's rate to convert hours -> rupees,
+  // and to patch both the attendance snapshot and the monthly_salary ledger.
+  const empRows = await dbQuery("SELECT basic_salary, ot_rate_per_hour FROM employees WHERE employee_id=?", [employee_id]);
+  const emp = empRows[0] || {};
+  const sRows = await dbQuery("SELECT key,value FROM settings WHERE key='working_days_month'");
+  const workDays = parseFloat(sRows[0]?.value || "26");
+  const dailyRate = parseFloat(emp.basic_salary||15000) / workDays;
+  const hourlyRate = dailyRate / 8;
+
+  const hasManualOT = emp.ot_rate_per_hour !== null && emp.ot_rate_per_hour !== undefined
+    && emp.ot_rate_per_hour !== "" && parseFloat(emp.ot_rate_per_hour) > 0;
+  const otRate = hasManualOT ? parseFloat(emp.ot_rate_per_hour) : hourlyRate;
+
+  const rate = isDeduction ? hourlyRate : otRate;
+  const deltaAmount = Math.round(deltaHours * rate * 100) / 100;
+  // OT increases pay (earning_total goes up); deduction decreases pay (earning_total goes down).
+  const totalDelta = isDeduction ? -deltaAmount : deltaAmount;
+
+  const [y, mo] = date.split("-").map(Number);
+
+  await dbQuery(
+    `UPDATE attendance SET ${field}=?, checkin_status=?,
+      earning_${isDeduction?"deduction":"ot"}=earning_${isDeduction?"deduction":"ot"}+?,
+      earning_total=earning_total+?
+     WHERE employee_id=? AND date=?`,
+    [desired, statusSuffix, deltaAmount, totalDelta, employee_id, date]
+  );
+
+  await dbQuery(
+    `UPDATE monthly_salary SET
+      ${isDeduction?"late_deduction":"normal_ot_amount"} = ${isDeduction?"late_deduction":"normal_ot_amount"} + ?,
+      net_salary = net_salary + ?,
+      updated_at = datetime('now')
+     WHERE employee_id=? AND month=? AND year=?`,
+    [deltaAmount, totalDelta, employee_id, mo, y]
+  );
+}
+
+function parse12h(t) {
+  if (!t) return 600; // default to 10:00 AM reference if somehow missing
+  try {
+    const parts = t.trim().split(" ");
+    let [hh,mm] = parts[0].split(":").map(Number);
+    if (parts[1]==="PM" && hh!==12) hh+=12;
+    if (parts[1]==="AM" && hh===12) hh=0;
+    return hh*60+mm;
+  } catch { return 600; }
+}
