@@ -422,7 +422,7 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
       </div>
     </div>
     <div class="mgr-section" id="mgr-approvals">
-      <p style="font-size:13px;color:var(--subtext);margin-bottom:14px">Employees who checked in between 10:05–10:30 AM — approve (no deduction) or reject (deduction applies)</p>
+      <p style="font-size:13px;color:var(--subtext);margin-bottom:14px">Two kinds of pending decisions: early arrivals (before 9:30 AM — approve grants OT, reject counts as normal time) and late zone (10:05–10:30 AM — approve waives deduction, reject applies it)</p>
       <div id="apprTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
     </div>
     <div class="mgr-section" id="mgr-salary">
@@ -564,6 +564,11 @@ html,body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe U
 <script>
 let EMP=null;
 let lastSalAllData=null;
+// Escapes free-text user input before inserting into innerHTML — prevents stored XSS
+// from fields like dispute issues/replies where employees/managers type arbitrary text.
+function escapeHtml(str){
+  return String(str==null?"":str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
 let istH=0,istM=0,istS=0,istDay=0,istDt=1,istMon=0,istYr=2026;
 let serverUTC=null,receivedAt=null,isServer=false;
 let locOK=false,locLat=null,locLng=null;
@@ -839,7 +844,7 @@ async function doCheckin(){
     checkedIn=true;
     document.getElementById("recIn").textContent=d.time;
     updateZone();
-    const det=d.zone==="early_ot"?`✅ Checked in at ${d.time}\n💰 Early OT until 10:00 AM`:d.zone==="manager_zone"?`✅ Checked in at ${d.time}\n⚠️ Pending manager approval`:d.zone==="late_deduct"?`✅ Checked in at ${d.time}\n❌ Deduction applies`:`✅ Checked in at ${d.time}\n🟢 On time!`;
+    const det=d.zone==="early_ot"?`✅ Checked in at ${d.time}\n⏳ Early arrival — pending manager approval`:d.zone==="manager_zone"?`✅ Checked in at ${d.time}\n⚠️ Pending manager approval`:d.zone==="late_deduct"?`✅ Checked in at ${d.time}\n❌ Deduction applies`:`✅ Checked in at ${d.time}\n🟢 On time!`;
     showSuccessWithLogout("✅","Check-in Successful!",d.time,det);
   }catch(e){showToast("❌ "+e.message,"err");updateBtn();}
 }
@@ -1192,7 +1197,7 @@ async function loadHolidays(){
     }
     let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Date</th><th>Name</th><th>Type</th><th>OT Multiplier</th><th>Action</th></tr>`;
     hols.forEach(h=>{
-      html+=`<tr><td>${h.date}</td><td><b>${h.name}</b></td><td>${h.type==="company"?"Company":"Public"}</td><td>${h.ot_multiplier}x</td><td><button class="mgr-btn-success" onclick='editHoliday(${JSON.stringify(h)})'>Edit</button> <button class="mgr-btn-danger" onclick="deleteHoliday(${h.id},'${h.name.replace(/'/g,"")}')">Delete</button></td></tr>`;
+      html+=`<tr><td>${escapeHtml(h.date)}</td><td><b>${escapeHtml(h.name)}</b></td><td>${h.type==="company"?"Company":"Public"}</td><td>${h.ot_multiplier}x</td><td><button class="mgr-btn-success" onclick='editHoliday(${JSON.stringify(h)})'>Edit</button> <button class="mgr-btn-danger" onclick="deleteHoliday(${h.id},'${h.name.replace(/'/g,"")}')">Delete</button></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("holidaysTable").innerHTML=html;
@@ -1257,12 +1262,12 @@ async function loadDisputes(){
     rows.forEach(r=>{
       html+=`<div class="card" style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div><b>${r.name}</b> <span style="color:var(--subtext);font-size:12px">(${r.department||"—"})</span></div>
-          <span class="badge badge-${r.status==="resolved"?"present":"pending"}">${r.status}</span>
+          <div><b>${escapeHtml(r.name)}</b> <span style="color:var(--subtext);font-size:12px">(${escapeHtml(r.department||"—")})</span></div>
+          <span class="badge badge-${r.status==="resolved"?"present":"pending"}">${escapeHtml(r.status)}</span>
         </div>
-        <div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Date: ${r.date||"—"}</div>
-        <div style="font-size:14px;margin-bottom:10px">${r.issue}</div>
-        ${r.manager_reply?`<div style="background:var(--light-green);border-radius:8px;padding:10px;font-size:13px;color:var(--green);margin-bottom:8px">Reply: ${r.manager_reply}</div>`:""}
+        <div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Date: ${escapeHtml(r.date||"—")}</div>
+        <div style="font-size:14px;margin-bottom:10px">${escapeHtml(r.issue)}</div>
+        ${r.manager_reply?`<div style="background:var(--light-green);border-radius:8px;padding:10px;font-size:13px;color:var(--green);margin-bottom:8px">Reply: ${escapeHtml(r.manager_reply)}</div>`:""}
         ${r.status==="pending"?`
           <textarea id="reply_${r.id}" rows="2" placeholder="Type reply..." style="width:100%;border:2px solid #e2e8f0;border-radius:8px;padding:8px;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px"></textarea>
           <button class="mgr-btn-success" onclick="resolveDispute(${r.id})">✅ Reply &amp; Resolve</button>
@@ -1291,22 +1296,32 @@ async function loadApprovals(){
     else{badge.style.display="none";}
     const tbl=document.getElementById("apprTable");
     if(!rows.length){tbl.innerHTML='<p style="text-align:center;padding:20px;color:var(--subtext)">✅ No pending approvals</p>';return;}
-    let html='<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Date</th><th>Check-in Time</th><th>Action</th></tr>';
+    let html='<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Type</th><th>Date</th><th>Check-in Time</th><th>Action</th></tr>';
     rows.forEach(r=>{
-      html+=`<tr><td><b>${r.name}</b></td><td>${r.department||"—"}</td><td>${r.date}</td><td>${r.checkin_time}</td><td>
-        <button class="mgr-btn-success" onclick="decideApproval('${r.employee_id}','${r.date}','approved')">✅ Approve</button>
+      const isEarly = r.type==="early_ot";
+      const typeBadge = isEarly ? `<span class="badge badge-present">🌅 Early OT</span>` : `<span class="badge badge-absent">⏰ Late Zone</span>`;
+      const approveLabel = isEarly ? "✅ Grant OT" : "✅ Approve";
+      const rejectLabel  = isEarly ? "❌ Normal Time" : "❌ Reject + Deduct";
+      html+=`<tr><td><b>${escapeHtml(r.name)}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${typeBadge}</td><td>${r.date}</td><td>${r.checkin_time}</td><td>
+        <button class="mgr-btn-success" onclick="decideApproval('${r.employee_id}','${r.date}','approved','${r.type||"late_zone"}')">${approveLabel}</button>
         &nbsp;
-        <button class="mgr-btn-danger" onclick="decideApproval('${r.employee_id}','${r.date}','rejected')">❌ Reject</button>
+        <button class="mgr-btn-danger" onclick="decideApproval('${r.employee_id}','${r.date}','rejected','${r.type||"late_zone"}')">${rejectLabel}</button>
       </td></tr>`;
     });
     html+="</table></div>";
     tbl.innerHTML=html;
   }catch(e){document.getElementById("apprTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
 }
-async function decideApproval(empId,date,decision){
+async function decideApproval(empId,date,decision,type){
   try{
-    await fetch("/api/approvals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:empId,date,decision})});
-    showToast(decision==="approved"?"✅ Approved!":"❌ Rejected — deduction applied","ok");
+    const res=await fetch("/api/approvals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:empId,date,decision})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||"Failed");
+    const isEarly = type==="early_ot";
+    const msg = decision==="approved"
+      ? (isEarly?"✅ OT granted!":"✅ Approved!")
+      : (isEarly?"Marked as normal time — no OT":"❌ Rejected — deduction applied");
+    showToast(msg,"ok");
     loadApprovals();
   }catch(e){showToast("Error: "+e.message,"err");}
 }
@@ -1334,7 +1349,7 @@ async function loadOverview(){
     let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>Employee</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr>`;
     [...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).forEach(r=>{
       const ok=r.status==="present";
-      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td></tr>`;
+      html+=`<tr><td><b>${escapeHtml(r.name||r.employee_id)}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td><span class="badge badge-${ok?"present":"absent"}">${ok?"Present":"Absent"}</span></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("ovTable").innerHTML=html;
@@ -1349,7 +1364,7 @@ async function loadEmployees(){
     let html=`<div style="overflow-x:auto"><table class="mgr-table"><tr><th>ID</th><th>Name</th><th>Department</th><th>Basic</th><th>OT/hr</th><th>Status</th><th>Actions</th></tr>`;
     emps.forEach(e=>{
       const otDisplay=(e.ot_rate_per_hour===null||e.ot_rate_per_hour===undefined||e.ot_rate_per_hour===""||parseFloat(e.ot_rate_per_hour)<=0)?"Auto":("₹"+e.ot_rate_per_hour);
-      html+=`<tr><td>${e.employee_id}</td><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>₹${Number(e.basic_salary||0).toLocaleString()}</td><td>${otDisplay}</td><td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td><td><button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button> <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button></td></tr>`;
+      html+=`<tr><td>${e.employee_id}</td><td><b>${escapeHtml(e.name)}</b></td><td>${escapeHtml(e.department||"—")}</td><td>₹${Number(e.basic_salary||0).toLocaleString()}</td><td>${otDisplay}</td><td><span class="badge badge-${e.status==="active"?"present":"absent"}">${e.status}</span></td><td><button class="mgr-btn-success" onclick="editEmp('${e.employee_id}')">Edit</button> <button class="mgr-btn-danger" onclick="deactivateEmp('${e.employee_id}','${e.name}')">Deactivate</button></td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("empTable").innerHTML=html;
@@ -1603,7 +1618,7 @@ async function loadAttAll(){
       const disapproveBtn=ok?`<button class="mgr-btn-danger" onclick="disapproveAttendance('${r.employee_id}','${date}','${(r.name||r.employee_id).replace(/'/g,"")}')">❌ Disapprove</button>`:"—";
       const disapproved=r.checkin_status==="disapproved";
       const statusLabel=ok?"Present":(disapproved?"Disapproved":"Absent");
-      html+=`<tr><td><b>${r.name||r.employee_id}</b></td><td>${r.department||"—"}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${statusLabel}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td><td>${disapproveBtn}</td></tr>`;
+      html+=`<tr><td><b>${escapeHtml(r.name||r.employee_id)}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${statusLabel}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td><td>${disapproveBtn}</td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
@@ -1669,7 +1684,7 @@ function renderSalTable(){
     totalNet+=net;
     const ot=(parseFloat(e.early_ot_hours||0)+parseFloat(e.late_ot_hours||0)).toFixed(1);
     const otRateLabel="₹"+e.effective_ot_rate+(e.ot_rate_mode==="auto"?" (auto)":"");
-    html+=`<tr><td><b>${e.name}</b></td><td>${e.department||"—"}</td><td>${e.total_present||0}</td><td>${otRateLabel}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td><td><button class="mgr-btn-success" onclick="downloadEmployeePDFForManager('${e.employee_id}')">📄 PDF</button></td></tr>`;
+    html+=`<tr><td><b>${escapeHtml(e.name)}</b></td><td>${escapeHtml(e.department||"—")}</td><td>${e.total_present||0}</td><td>${otRateLabel}</td><td>${ot}h</td><td>₹${Math.round(parseFloat(e.basic_earned||0)).toLocaleString()}</td><td>₹${Math.round(parseFloat(e.normal_ot_amount||0)).toLocaleString()}</td><td style="color:var(--red)">₹${Math.round(parseFloat(e.late_deduction||0)).toLocaleString()}</td><td><b style="color:var(--green)">₹${Math.round(net).toLocaleString()}</b></td><td><button class="mgr-btn-success" onclick="downloadEmployeePDFForManager('${e.employee_id}')">📄 PDF</button></td></tr>`;
   });
   html+=`<tr style="background:var(--gray);font-weight:700"><td colspan="8">Total Salary Payable</td><td style="color:var(--green)">₹${Math.round(totalNet).toLocaleString()}</td><td></td></tr>`;
   html+="</table></div>";
@@ -1930,11 +1945,11 @@ async function loadMyDisputes(){
       const statusColor=r.status==="resolved"?"var(--green)":"var(--yellow)";
       html+=`<div style="padding:12px 0;border-bottom:1px solid var(--gray)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <span style="font-size:12px;color:var(--subtext)">${r.date||"—"}</span>
-          <span class="badge" style="background:${r.status==="resolved"?"var(--light-green)":"var(--light-yellow)"};color:${statusColor}">${r.status}</span>
+          <span style="font-size:12px;color:var(--subtext)">${escapeHtml(r.date||"—")}</span>
+          <span class="badge" style="background:${r.status==="resolved"?"var(--light-green)":"var(--light-yellow)"};color:${statusColor}">${escapeHtml(r.status)}</span>
         </div>
-        <div style="font-size:13px;margin-bottom:4px">${r.issue}</div>
-        ${r.manager_reply?`<div style="font-size:12px;color:var(--green);background:var(--light-green);border-radius:8px;padding:8px;margin-top:6px">👤 Manager: ${r.manager_reply}</div>`:""}
+        <div style="font-size:13px;margin-bottom:4px">${escapeHtml(r.issue)}</div>
+        ${r.manager_reply?`<div style="font-size:12px;color:var(--green);background:var(--light-green);border-radius:8px;padding:8px;margin-top:6px">👤 Manager: ${escapeHtml(r.manager_reply)}</div>`:""}
       </div>`;
     });
     document.getElementById("myDisputesList").innerHTML=html;
