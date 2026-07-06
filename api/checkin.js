@@ -154,7 +154,9 @@ module.exports = async function handler(req, res) {
     else if (nowMins < toMins(s.manager_zone_end    || "10:30")) zone = "manager_zone";
     else                                                          zone = "late_deduct";
 
-    const earlyOT = zone === "early_ot"    ? Math.max(0, (600 - nowMins) / 60) : 0;
+    // Early OT is no longer auto-granted — it now goes to manager approval (see below),
+    // same as the 10:05-10:30 late zone. Nothing is credited until the manager decides.
+    const earlyOT = 0;
     const deduct  = zone === "late_deduct" ? Math.max(0, (nowMins - 600) / 60) : 0;
     const isSun   = day === 0 ? 1 : 0;
     const hol     = await dbQuery("SELECT ot_multiplier FROM holidays WHERE date=?", [today]);
@@ -176,7 +178,13 @@ module.exports = async function handler(req, res) {
 
     if (zone === "manager_zone") {
       await dbQuery(
-        "INSERT INTO manager_approvals(employee_id,date,checkin_time,decision) VALUES(?,?,?,'pending')",
+        "INSERT INTO manager_approvals(employee_id,date,checkin_time,decision,type) VALUES(?,?,?,'pending','late_zone')",
+        [emp.employee_id, today, timeStr]
+      );
+    }
+    if (zone === "early_ot") {
+      await dbQuery(
+        "INSERT INTO manager_approvals(employee_id,date,checkin_time,decision,type) VALUES(?,?,?,'pending','early_ot')",
         [emp.employee_id, today, timeStr]
       );
     }
