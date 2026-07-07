@@ -4,7 +4,7 @@
   "description": "Labour Attendance PWA",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a3a5c",
-  "theme_color": "#1a3a5c",
+  "background_color": "#1c2b38",
+  "theme_color": "#1c2b38",
   "orientation": "portrait"
 }
