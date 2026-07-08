@@ -3,47 +3,47 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
-<meta name="theme-color" content="#1c2b38"/>
+<meta name="theme-color" content="#5c1f2e"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
 <title>Attendance System</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --dark-blue:#1c2b38;--mid-blue:#b8791f;--light-blue:#f7ecd8;
-  --green:#2f7a52;--light-green:#e3efe7;
-  --orange:#c1622d;--light-orange:#f7e6d9;
-  --yellow:#b8860b;--light-yellow:#faf1d6;
-  --red:#b3402a;--light-red:#f7e3de;
-  --purple:#6b5b95;--light-purple:#eeebf5;
-  --cooling:#5b7c96;--light-cooling:#e6edf1;
-  --gray:#eef0ee;--dark-gray:#3d4a52;
-  --text:#1c2733;--subtext:#6b7680;
+  --dark-blue:#5c1f2e;--mid-blue:#b8754f;--light-blue:#f5e6dc;
+  --green:#4a7c59;--light-green:#e6efe8;
+  --orange:#c17a3f;--light-orange:#f5e9dc;
+  --yellow:#b8923f;--light-yellow:#f7f0dc;
+  --red:#a8434a;--light-red:#f5e0e0;
+  --purple:#7d5a6e;--light-purple:#f0e6ea;
+  --cooling:#8a6570;--light-cooling:#f0e6e9;
+  --gray:#f2ece9;--dark-gray:#4a3a3d;
+  --text:#2b1c20;--subtext:#7d6b6e;
 }
-html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef0ec;color:var(--text);-webkit-tap-highlight-color:transparent}
-.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--dark-blue) repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 14px)}
+html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f7f1ee;color:var(--text);-webkit-tap-highlight-color:transparent}
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 0%,#7a2c3d 0%,var(--dark-blue) 60%)}
 .login-logo{font-size:56px;margin-bottom:12px;text-align:center}
-.login-title{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-bottom:6px;text-align:center;letter-spacing:.3px}
-.login-sub{font-size:14px;color:rgba(255,255,255,.6);margin-bottom:32px;text-align:center}
+.login-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#fff;margin-bottom:6px;text-align:center;letter-spacing:.3px}
+.login-sub{font-size:14px;color:rgba(255,255,255,.65);margin-bottom:32px;text-align:center}
 .login-card{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:380px}
 .login-label{font-size:13px;font-weight:600;color:var(--subtext);margin-bottom:8px;display:block}
-.login-input{width:100%;border:2px solid #dde1dd;border-radius:12px;padding:14px 16px;font-size:16px;outline:none;transition:border-color .2s;margin-bottom:14px}
+.login-input{width:100%;border:2px solid #e5d9d3;border-radius:12px;padding:14px 16px;font-size:16px;outline:none;transition:border-color .2s;margin-bottom:14px}
 .login-input:focus{border-color:var(--mid-blue)}
-.login-btn{width:100%;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all .15s;box-shadow:0 3px 0 rgba(0,0,0,.25)}
-.login-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.login-btn{width:100%;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all .15s;box-shadow:0 6px 16px rgba(92,31,46,.3)}
+.login-btn:active{transform:translateY(2px);box-shadow:0 3px 8px rgba(92,31,46,.3)}
 .login-btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
 .login-divider{text-align:center;color:var(--subtext);font-size:13px;margin:16px 0;position:relative}
-.login-divider::before,.login-divider::after{content:"";position:absolute;top:50%;width:40%;height:1px;background:#dde1dd}
+.login-divider::before,.login-divider::after{content:"";position:absolute;top:50%;width:40%;height:1px;background:#e5d9d3}
 .login-divider::before{left:0}.login-divider::after{right:0}
-.mgr-btn{width:100%;background:transparent;color:var(--dark-gray);border:2px solid #dde1dd;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
+.mgr-btn{width:100%;background:transparent;color:var(--dark-gray);border:2px solid #e5d9d3;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
 .mgr-btn:hover{border-color:var(--dark-blue);color:var(--dark-blue)}
 .login-err{color:var(--red);font-size:13px;margin-top:10px;text-align:center;min-height:18px}
 .header{background:var(--dark-blue);color:#fff;padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--mid-blue)}
-.header-left h1{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:.2px}
+.header-left h1{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;letter-spacing:.2px}
 .header-left p{font-size:11px;opacity:.65;margin-top:1px}
 .header-time{text-align:right}
 .time-display{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -52,11 +52,11 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .badge-server{background:var(--green);color:#fff}
 .badge-device{background:var(--yellow);color:#fff}
 .content{padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
-.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 16px rgba(28,39,51,.08)}
-.card-title{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--subtext);margin-bottom:12px}
+.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 16px rgba(92,31,46,.08)}
+.card-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--subtext);margin-bottom:12px}
 .zone-banner{border-radius:14px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
 .zone-icon{font-size:28px;line-height:1}
-.zone-name{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700}
+.zone-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
 .zone-desc{font-size:12px;margin-top:2px;opacity:.85}
 .z-early{background:var(--light-green);color:var(--green)}
 .z-normal{background:var(--light-blue);color:var(--mid-blue)}
@@ -77,7 +77,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .p-info{background:var(--light-yellow);color:var(--yellow)}
 .emp-row{display:flex;align-items:center;gap:14px}
 .emp-avatar{width:52px;height:52px;border-radius:50%;background:var(--dark-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;border:3px solid var(--mid-blue)}
-.emp-name{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700}
+.emp-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:700}
 .emp-id{font-size:12px;color:var(--subtext);margin-top:2px}
 .emp-dept{font-size:12px;color:var(--subtext)}
 .emp-badge{margin-left:auto;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
@@ -86,18 +86,18 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .rec-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray)}
 .rec-row:last-child{border-bottom:none;padding-bottom:0}
 .rec-label{font-size:13px;color:var(--subtext)}
-.rec-value{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600}
+.rec-value{font-size:13px;font-weight:600}
 .rv-green{color:var(--green)}
 .rv-orange{color:var(--orange)}
-.action-btn{width:100%;border:none;border-radius:16px;padding:18px;font-size:17px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 0 rgba(0,0,0,.15),0 6px 16px rgba(0,0,0,.1)}
-.action-btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08)}
+.action-btn{width:100%;border:none;border-radius:16px;padding:18px;font-size:17px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 20px rgba(92,31,46,.2)}
+.action-btn:active{transform:translateY(2px) scale(.98);box-shadow:0 4px 10px rgba(92,31,46,.18)}
 .btn-in{background:var(--green);color:#fff}
 .btn-out{background:var(--orange);color:#fff}
 .btn-off{background:var(--gray);color:var(--subtext);cursor:not-allowed;box-shadow:none}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
 .modal{background:#fff;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
-.modal-title{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px}
+.modal-title{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;margin-bottom:6px}
 .modal-sub{font-size:13px;color:var(--subtext);margin-bottom:20px}
 .modal-close{float:right;background:var(--gray);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;line-height:32px;text-align:center}
 .selfie-box{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4}
@@ -114,7 +114,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.ok{background:var(--green)}
 .toast.err{background:var(--red)}
-.navbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #dde1dd;display:flex;z-index:100;max-width:480px;margin:0 auto}
+.navbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5d9d3;display:flex;z-index:100;max-width:480px;margin:0 auto}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 14px;cursor:pointer;border:none;background:none;color:var(--subtext);gap:3px;border-top:3px solid transparent}
 .nav-item.active{color:var(--dark-blue);border-top-color:var(--mid-blue)}
 .nav-icon{font-size:22px}
@@ -132,35 +132,35 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .cal-day.cal-late{background:var(--yellow)}
 .cal-day.cal-ot{background:var(--mid-blue)}
 .history-item:last-child{border-bottom:none}
-.h-day{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--dark-blue)}
+.h-day{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--dark-blue)}
 .h-mon{font-size:10px;color:var(--subtext)}
 .h-status{font-size:13px;font-weight:600}
 .h-times{font-size:11px;color:var(--subtext);margin-top:2px}
 .sal-card{border-radius:16px;padding:20px;background:linear-gradient(135deg,var(--dark-blue),var(--mid-blue));color:#fff;margin-bottom:14px}
-.sal-amount{font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:700;margin:4px 0}
+.sal-amount{font-family:'Playfair Display',serif;font-size:33px;font-weight:700;margin:4px 0}
 .sal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sal-item{background:var(--gray);border-radius:12px;padding:12px}
 .si-label{font-size:11px;color:var(--subtext)}
-.si-value{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;margin-top:4px}
+.si-value{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-top:4px}
 .countdown-box{background:var(--light-green);border-radius:12px;padding:14px;text-align:center;margin-top:16px}
-.countdown-num{font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:700;color:var(--green)}
+.countdown-num{font-family:'Playfair Display',serif;font-size:33px;font-weight:700;color:var(--green)}
 .countdown-txt{font-size:13px;color:var(--green);margin-top:4px}
-.mgr-wrap{min-height:100vh;background:#eef0ec}
+.mgr-wrap{min-height:100vh;background:#f7f1ee}
 .mgr-header{background:var(--dark-blue);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:3px solid var(--mid-blue)}
-.mgr-header h1{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;letter-spacing:.2px}
+.mgr-header h1{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;letter-spacing:.2px}
 .mgr-logout-btn{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer}
-.mgr-tabs{display:flex;background:#fff;border-bottom:1px solid #dde1dd;overflow-x:auto;position:sticky;top:57px;z-index:99}
+.mgr-tabs{display:flex;background:#fff;border-bottom:1px solid #e5d9d3;overflow-x:auto;position:sticky;top:57px;z-index:99}
 .mgr-tab{flex-shrink:0;padding:12px 16px;border:none;background:none;font-size:13px;font-weight:600;color:var(--subtext);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 .mgr-tab.active{color:var(--dark-blue);border-bottom-color:var(--mid-blue)}
 .mgr-content{padding:16px;max-width:1200px;margin:0 auto}
 .mgr-section{display:none}
 .mgr-section.active{display:block}
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
-.stat-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(28,39,51,.08)}
+.stat-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(92,31,46,.08)}
 .stat-icon{font-size:28px;margin-bottom:8px}
-.stat-value{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;color:var(--dark-blue)}
+.stat-value{font-family:'Playfair Display',serif;font-size:29px;font-weight:700;color:var(--dark-blue)}
 .stat-label{font-size:12px;color:var(--subtext);margin-top:4px}
-.mgr-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(28,39,51,.08)}
+.mgr-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(92,31,46,.08)}
 .mgr-table th{background:var(--dark-blue);color:#fff;padding:12px 14px;text-align:left;font-size:13px;font-weight:600}
 .mgr-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--gray)}
 .mgr-table tr:last-child td{border-bottom:none}
@@ -171,7 +171,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .badge-late{background:var(--light-yellow);color:var(--yellow)}
 .badge-pending{background:var(--light-orange);color:var(--orange)}
 .mgr-form label{display:block;font-size:13px;font-weight:600;color:var(--subtext);margin-bottom:6px;margin-top:14px}
-.mgr-form input,.mgr-form select{width:100%;border:2px solid #dde1dd;border-radius:10px;padding:12px;font-size:14px;outline:none}
+.mgr-form input,.mgr-form select{width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:12px;font-size:14px;outline:none}
 .mgr-form input:focus,.mgr-form select:focus{border-color:var(--mid-blue)}
 .mgr-btn-primary{background:var(--dark-blue);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px}
 .mgr-btn-danger{background:var(--red);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
@@ -271,13 +271,13 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
       <div class="card">
         <div class="card-title">📄 Download Report</div>
         <div style="display:flex;gap:10px;margin-bottom:12px">
-          <select id="rptMonth" style="flex:1;border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none">
+          <select id="rptMonth" style="flex:1;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none">
             <option value="1">January</option><option value="2">February</option><option value="3">March</option>
             <option value="4">April</option><option value="5">May</option><option value="6">June</option>
             <option value="7">July</option><option value="8">August</option><option value="9">September</option>
             <option value="10">October</option><option value="11">November</option><option value="12">December</option>
           </select>
-          <input type="number" id="rptYear" style="width:90px;border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none" placeholder="2026"/>
+          <input type="number" id="rptYear" style="width:90px;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none" placeholder="2026"/>
         </div>
         <button class="action-btn" style="background:var(--mid-blue)" id="rptBtn" onclick="downloadReportPDF()">📄 Download PDF Report</button>
       </div>
@@ -308,7 +308,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
       <div class="card">
         <div class="card-title">Raise a Dispute</div>
         <p style="font-size:13px;color:var(--subtext);margin-bottom:10px">Attendance galat hai? Manager ko batao.</p>
-        <textarea id="disputeText" rows="3" style="width:100%;border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none;resize:vertical;font-family:inherit" placeholder="Issue describe karo..."></textarea>
+        <textarea id="disputeText" rows="3" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;resize:vertical;font-family:inherit" placeholder="Issue describe karo..."></textarea>
         <button onclick="submitDispute()" style="margin-top:10px;width:100%;padding:13px;background:var(--dark-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">📤 Send to Manager</button>
       </div>
       <div class="card">
@@ -390,8 +390,8 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
     </div>
     <div class="mgr-section" id="mgr-attendance">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-        <input type="date" id="attDate" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none"/>
-        <select id="attEmpFilter" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none;max-width:180px">
+        <input type="date" id="attDate" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none"/>
+        <select id="attEmpFilter" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;max-width:180px">
           <option value="">All Employees</option>
         </select>
         <button class="mgr-btn-primary" onclick="loadAttAll()" style="margin-top:0">Search</button>
@@ -403,7 +403,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
         <div class="card-title">✍️ Manual Attendance Entry</div>
         <div class="mgr-form">
           <label>Employee</label>
-          <select id="manualEmpId" style="width:100%;border:2px solid #dde1dd;border-radius:10px;padding:11px;font-size:14px;outline:none">
+          <select id="manualEmpId" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:11px;font-size:14px;outline:none">
             <option value="">-- Select Employee --</option>
           </select>
           <label>Date</label>
@@ -413,7 +413,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
           <label>Check-out Time (HH:MM AM/PM)</label>
           <input type="text" id="manualCheckout" placeholder="06:00 PM"/>
           <label>Status</label>
-          <select id="manualStatus" style="width:100%;border:2px solid #dde1dd;border-radius:10px;padding:11px;font-size:14px;outline:none">
+          <select id="manualStatus" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:11px;font-size:14px;outline:none">
             <option value="present">Present</option>
             <option value="absent">Absent</option>
             <option value="late">Late</option>
@@ -431,20 +431,20 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
     </div>
     <div class="mgr-section" id="mgr-salary">
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-        <select id="mgrSalMonth" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none">
+        <select id="mgrSalMonth" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none">
           <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option>
           <option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option>
           <option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select>
-        <input type="number" id="mgrSalYear" value="2026" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none;width:90px"/>
-        <select id="salDeptFilter" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none" onchange="renderSalTable()">
+        <input type="number" id="mgrSalYear" value="2026" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;width:90px"/>
+        <select id="salDeptFilter" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none" onchange="renderSalTable()">
           <option value="">All Departments</option>
         </select>
         <button class="mgr-btn-primary" onclick="loadSalAll()" style="margin-top:0">View</button>
         <button class="mgr-btn-success" onclick="downloadAllSalaryPDF()" style="margin-top:0" id="rptAllBtn">📄 Download All (PDF)</button>
       </div>
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-        <select id="salYearlyEmpId" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none;max-width:220px">
+        <select id="salYearlyEmpId" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;max-width:220px">
           <option value="">-- Select Employee for Yearly Report --</option>
         </select>
         <button class="mgr-btn-success" onclick="downloadYearlyPDF()" id="rptYearlyBtn">📅 Yearly Report (PDF)</button>
@@ -454,11 +454,11 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
         <div class="card-title">➕ Add Bonus / Deduction</div>
         <div class="mgr-form">
           <label>Employee</label>
-          <select id="salAdjEmpId" style="width:100%;border:2px solid #dde1dd;border-radius:10px;padding:11px;font-size:14px;outline:none">
+          <select id="salAdjEmpId" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:11px;font-size:14px;outline:none">
             <option value="">-- Select Employee --</option>
           </select>
           <label>Type</label>
-          <select id="salAdjType" style="width:100%;border:2px solid #dde1dd;border-radius:10px;padding:11px;font-size:14px;outline:none" onchange="toggleSalAdjLabel()">
+          <select id="salAdjType" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:11px;font-size:14px;outline:none" onchange="toggleSalAdjLabel()">
             <option value="bonus">Bonus (+)</option>
             <option value="deduction">Deduction (-)</option>
             <option value="override">Override Net Salary (set exact amount)</option>
@@ -481,7 +481,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
           <label>Name</label>
           <input type="text" id="holName" placeholder="e.g. Diwali"/>
           <label>Type</label>
-          <select id="holType" style="width:100%;border:2px solid #dde1dd;border-radius:10px;padding:11px;font-size:14px;outline:none">
+          <select id="holType" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:11px;font-size:14px;outline:none">
             <option value="public">Public Holiday</option>
             <option value="company">Company Holiday</option>
           </select>
@@ -496,7 +496,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
     </div>
     <div class="mgr-section" id="mgr-disputes">
       <div style="display:flex;gap:10px;margin-bottom:14px">
-        <select id="dispFilter" onchange="loadDisputes()" style="border:2px solid #dde1dd;border-radius:10px;padding:10px;font-size:14px;outline:none">
+        <select id="dispFilter" onchange="loadDisputes()" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none">
           <option value="pending">Pending</option>
           <option value="resolved">Resolved</option>
           <option value="">All</option>
@@ -1273,7 +1273,7 @@ async function loadDisputes(){
         <div style="font-size:14px;margin-bottom:10px">${escapeHtml(r.issue)}</div>
         ${r.manager_reply?`<div style="background:var(--light-green);border-radius:8px;padding:10px;font-size:13px;color:var(--green);margin-bottom:8px">Reply: ${escapeHtml(r.manager_reply)}</div>`:""}
         ${r.status==="pending"?`
-          <textarea id="reply_${r.id}" rows="2" placeholder="Type reply..." style="width:100%;border:2px solid #dde1dd;border-radius:8px;padding:8px;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px"></textarea>
+          <textarea id="reply_${r.id}" rows="2" placeholder="Type reply..." style="width:100%;border:2px solid #e5d9d3;border-radius:8px;padding:8px;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px"></textarea>
           <button class="mgr-btn-success" onclick="resolveDispute(${r.id})">✅ Reply &amp; Resolve</button>
         `:""}
       </div>`;
