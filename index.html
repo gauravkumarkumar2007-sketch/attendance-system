@@ -820,14 +820,14 @@ function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=nul
 function capturePhoto(){
   const v=document.getElementById("selfieVid");
   const c=document.getElementById("selfieCvs");
-  // Resize to smaller size for faster upload/storage (max 480px wide)
+  // Resize for reasonable upload/storage size while staying sharp enough to zoom in on (max 640px wide)
   const srcW=v.videoWidth||1280, srcH=v.videoHeight||720;
-  const targetW=480;
+  const targetW=640;
   const scale=targetW/srcW;
   c.width=targetW; c.height=Math.round(srcH*scale);
   const ctx=c.getContext("2d");
   ctx.scale(-1,1);ctx.drawImage(v,-c.width,0,c.width,c.height);ctx.scale(-1,1);
-  photo=c.toDataURL("image/jpeg",0.6);
+  photo=c.toDataURL("image/jpeg",0.72);
   document.getElementById("selfieImg").src=photo;
   document.getElementById("selfieBox").style.display="none";
   document.getElementById("selfiePreview").style.display="block";
@@ -1660,7 +1660,7 @@ function zoomPhoto(key){
   const d=attPhotoData[key];
   if(!d)return;
   let html=`<div style="text-align:center"><div style="font-size:13px;color:var(--subtext);margin-bottom:12px">${d.label}</div>`;
-  html+=`<img src="${d.src}" style="width:100%;border-radius:12px"/>`;
+  html+=`<img src="${d.src}" style="max-width:340px;width:100%;border-radius:12px"/>`;
   html+=`<button onclick="closeModal('successModal')" style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">Close</button></div>`;
   document.getElementById("successContent").innerHTML=html;
   openModal("successModal");
