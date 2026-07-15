@@ -1317,8 +1317,14 @@ async function loadApprovals(){
   }catch(e){document.getElementById("apprTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
 }
 async function decideApproval(empId,date,decision,type){
+  let note="";
+  if(decision==="rejected"){
+    const reason=prompt("Reason (optional — employee will see this on Telegram):","");
+    if(reason===null)return; // cancelled
+    note=reason.trim();
+  }
   try{
-    const res=await fetch("/api/approvals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:empId,date,decision})});
+    const res=await fetch("/api/approvals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:empId,date,decision,note})});
     const d=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(d.error||"Failed");
     const isEarly = type==="early_ot";
@@ -1613,16 +1619,26 @@ async function loadAttAll(){
     const absent=d.absent||[];
     const all=[...present,...absent].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
     attPhotoData={};
-    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>Photo</th><th>Action</th></tr>`;
+    let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>In Photo</th><th>Out Photo</th><th>Action</th></tr>`;
     all.forEach(r=>{
       const ok=r.status==="present";
       const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
-      const hasPhoto=r.selfie_base64||r.checkout_selfie_base64;
-      if(hasPhoto) attPhotoData[r.employee_id]={name:r.name||r.employee_id,checkin:r.selfie_base64||null,checkout:r.checkout_selfie_base64||null,checkinTime:r.checkin_time,checkoutTime:r.checkout_time};
+      const empName=escapeHtml(r.name||r.employee_id);
+      let inThumb="—",outThumb="—";
+      if(r.selfie_base64){
+        const key=r.employee_id+"_in";
+        attPhotoData[key]={src:r.selfie_base64,label:`${empName} — Check-in (${r.checkin_time||"—"})`};
+        inThumb=`<img src="${r.selfie_base64}" style="width:42px;height:42px;border-radius:8px;object-fit:cover;cursor:pointer;border:2px solid var(--green)" onclick="zoomPhoto('${key}')"/>`;
+      }
+      if(r.checkout_selfie_base64){
+        const key=r.employee_id+"_out";
+        attPhotoData[key]={src:r.checkout_selfie_base64,label:`${empName} — Check-out (${r.checkout_time||"—"})`};
+        outThumb=`<img src="${r.checkout_selfie_base64}" style="width:42px;height:42px;border-radius:8px;object-fit:cover;cursor:pointer;border:2px solid var(--orange)" onclick="zoomPhoto('${key}')"/>`;
+      }
       const disapproveBtn=ok?`<button class="mgr-btn-danger" onclick="disapproveAttendance('${r.employee_id}','${date}','${(r.name||r.employee_id).replace(/'/g,"")}')">❌ Disapprove</button>`:"—";
       const disapproved=r.checkin_status==="disapproved";
       const statusLabel=ok?"Present":(disapproved?"Disapproved":"Absent");
-      html+=`<tr><td><b>${escapeHtml(r.name||r.employee_id)}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${statusLabel}</span></td><td>${hasPhoto?`<button class="mgr-btn-success" onclick="viewPhotos('${r.employee_id}')">📸 View</button>`:"—"}</td><td>${disapproveBtn}</td></tr>`;
+      html+=`<tr><td><b>${empName}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${statusLabel}</span></td><td>${inThumb}</td><td>${outThumb}</td><td>${disapproveBtn}</td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
@@ -1630,30 +1646,22 @@ async function loadAttAll(){
 }
 async function disapproveAttendance(empId,date,name){
   if(!confirm(`Disapprove ${name}'s attendance for ${date}?\n\nThis will mark the day ABSENT and reverse any salary already credited for it. This cannot be undone.`))return;
+  const reason=prompt("Reason for disapproving (employee will see this on Telegram):","");
+  if(reason===null)return; // cancelled
   try{
-    const res=await fetch("/api/attendance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({disapprove:true,employee_id:empId,date})});
+    const res=await fetch("/api/attendance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({disapprove:true,employee_id:empId,date,reason:reason.trim()})});
     const d=await res.json();
     if(!res.ok)throw new Error(d.error||"Failed");
     showToast("Attendance disapproved — marked absent","ok");
     loadAttAll();
   }catch(e){showToast("Error: "+e.message,"err");}
 }
-function viewPhotos(empId){
-  const d=attPhotoData[empId];
+function zoomPhoto(key){
+  const d=attPhotoData[key];
   if(!d)return;
-  let html=`<div style="text-align:center"><h3 style="font-size:17px;font-weight:700;margin-bottom:16px">${d.name}</h3>`;
-  html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">`;
-  if(d.checkin){
-    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-in (${d.checkinTime||"—"})</div><img src="${d.checkin}" style="width:100%;border-radius:12px;border:2px solid var(--green)"/></div>`;
-  }else{
-    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-in</div><div style="background:var(--gray);border-radius:12px;padding:40px 0;color:var(--subtext);font-size:13px">No photo</div></div>`;
-  }
-  if(d.checkout){
-    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-out (${d.checkoutTime||"—"})</div><img src="${d.checkout}" style="width:100%;border-radius:12px;border:2px solid var(--orange)"/></div>`;
-  }else{
-    html+=`<div style="flex:1;min-width:140px"><div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Check-out</div><div style="background:var(--gray);border-radius:12px;padding:40px 0;color:var(--subtext);font-size:13px">No photo</div></div>`;
-  }
-  html+=`</div><button onclick="closeModal('successModal')" style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">Close</button></div>`;
+  let html=`<div style="text-align:center"><div style="font-size:13px;color:var(--subtext);margin-bottom:12px">${d.label}</div>`;
+  html+=`<img src="${d.src}" style="width:100%;border-radius:12px"/>`;
+  html+=`<button onclick="closeModal('successModal')" style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">Close</button></div>`;
   document.getElementById("successContent").innerHTML=html;
   openModal("successModal");
 }
