@@ -7,6 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
@@ -820,14 +822,12 @@ function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=nul
 function capturePhoto(){
   const v=document.getElementById("selfieVid");
   const c=document.getElementById("selfieCvs");
-  // Resize for reasonable upload/storage size while staying sharp enough to zoom in on (max 640px wide)
-  const srcW=v.videoWidth||1280, srcH=v.videoHeight||720;
-  const targetW=640;
-  const scale=targetW/srcW;
-  c.width=targetW; c.height=Math.round(srcH*scale);
+  // Capture at full camera resolution — thumbnails in tables are just small CSS display size,
+  // the actual stored photo stays full quality so zooming in looks sharp.
+  c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
   const ctx=c.getContext("2d");
   ctx.scale(-1,1);ctx.drawImage(v,-c.width,0,c.width,c.height);ctx.scale(-1,1);
-  photo=c.toDataURL("image/jpeg",0.72);
+  photo=c.toDataURL("image/jpeg",0.92);
   document.getElementById("selfieImg").src=photo;
   document.getElementById("selfieBox").style.display="none";
   document.getElementById("selfiePreview").style.display="block";
@@ -1660,7 +1660,7 @@ function zoomPhoto(key){
   const d=attPhotoData[key];
   if(!d)return;
   let html=`<div style="text-align:center"><div style="font-size:13px;color:var(--subtext);margin-bottom:12px">${d.label}</div>`;
-  html+=`<img src="${d.src}" style="max-width:340px;width:100%;border-radius:12px"/>`;
+  html+=`<img src="${d.src}" style="max-width:420px;width:100%;border-radius:12px"/>`;
   html+=`<button onclick="closeModal('successModal')" style="margin-top:16px;width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">Close</button></div>`;
   document.getElementById("successContent").innerHTML=html;
   openModal("successModal");
