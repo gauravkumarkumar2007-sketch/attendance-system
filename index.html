@@ -25,6 +25,7 @@
   --cooling:#8a6570;--light-cooling:#f0e6e9;
   --gray:#f2ece9;--dark-gray:#4a3a3d;
   --text:#2b1c20;--subtext:#7d6b6e;
+  --cal-present:#3f8f5f;--cal-absent:#c0392b;--cal-late:#d68910;--cal-ot:#3d6d8a;--cal-leave:#8b5fa3;
 }
 html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f7f1ee;color:var(--text);-webkit-tap-highlight-color:transparent}
 .login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 0%,#7a2c3d 0%,var(--dark-blue) 60%)}
@@ -112,7 +113,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .step{flex:1;height:4px;border-radius:4px;background:var(--gray)}
 .step.active{background:var(--mid-blue)}
 .step.done{background:var(--green)}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--dark-gray);color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:300;transition:transform .3s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--dark-gray);color:#fff;padding:12px 20px;border-radius:16px;font-size:14px;font-weight:500;z-index:300;transition:transform .3s;white-space:normal;text-align:center;max-width:85vw;width:max-content;box-shadow:0 4px 20px rgba(0,0,0,.2)}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.ok{background:var(--green)}
 .toast.err{background:var(--red)}
@@ -129,10 +130,11 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:600;color:#fff}
 .cal-day.cal-blank{background:transparent}
 .cal-day.cal-future{background:var(--gray);color:var(--subtext)}
-.cal-day.cal-present{background:var(--green)}
-.cal-day.cal-absent{background:var(--red)}
-.cal-day.cal-late{background:var(--yellow)}
-.cal-day.cal-ot{background:var(--mid-blue)}
+.cal-day.cal-present{background:var(--cal-present)}
+.cal-day.cal-absent{background:var(--cal-absent)}
+.cal-day.cal-late{background:var(--cal-late)}
+.cal-day.cal-ot{background:var(--cal-ot)}
+.cal-day.cal-leave{background:var(--cal-leave)}
 .history-item:last-child{border-bottom:none}
 .h-day{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--dark-blue)}
 .h-mon{font-size:10px;color:var(--subtext)}
@@ -182,6 +184,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 </style>
 </head>
 <body>
+<div id="offlineBanner" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:600;z-index:9999">📡 No internet connection — kuch bhi save nahi hoga jab tak wapas connect na ho</div>
 <div id="loginWrap" class="login-wrap">
   <div class="login-logo">⏰</div>
   <div class="login-title">Attendance System</div>
@@ -287,7 +290,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
         <div class="card-title">📅 Calendar View</div>
         <div id="histCalendar"><p style="text-align:center;color:var(--subtext);padding:20px">⏳ Loading...</p></div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--subtext)">
-          <span>🟩 Present</span><span>🟥 Absent</span><span>🟨 Late</span><span>🟦 OT Day</span>
+          <span>🟩 Present</span><span>🟥 Absent</span><span>🟧 Late</span><span>🟦 OT Day</span><span>🟪 On Leave</span>
         </div>
       </div>
       <div class="card">
@@ -306,6 +309,27 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
         <div class="rec-row"><span class="rec-label">Basic Salary</span><span class="rec-value rv-green" id="profSal">-</span></div>
         <div class="rec-row"><span class="rec-label">OT Rate</span><span class="rec-value rv-orange" id="profOT">-</span></div>
         <div class="rec-row"><span class="rec-label">Joining Date</span><span class="rec-value" id="profJoin">-</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏖️ Request Leave</div>
+        <p style="font-size:13px;color:var(--subtext);margin-bottom:10px">Chhutti chahiye? Manager ko request bhejo.</p>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--subtext);margin-bottom:4px">Start Date</label>
+        <input type="date" id="leaveStart" onchange="onLeaveDateChange()" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;margin-bottom:10px"/>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--subtext);margin-bottom:4px">End Date</label>
+        <input type="date" id="leaveEnd" onchange="onLeaveDateChange()" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;margin-bottom:4px"/>
+        <div id="leaveDayCount" style="font-size:12px;color:var(--mid-blue);font-weight:600;margin-bottom:10px;min-height:16px"></div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--subtext);margin-bottom:4px">Leave Type</label>
+        <select id="leaveType" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;margin-bottom:10px">
+          <option value="casual">Casual</option>
+          <option value="sick">Sick</option>
+          <option value="unpaid">Unpaid</option>
+        </select>
+        <textarea id="leaveReason" rows="2" style="width:100%;border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none;resize:vertical;font-family:inherit" placeholder="Reason (optional)..."></textarea>
+        <button onclick="submitLeave()" style="margin-top:10px;width:100%;padding:13px;background:var(--dark-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">📤 Submit Request</button>
+      </div>
+      <div class="card">
+        <div class="card-title">My Leave Requests</div>
+        <div id="myLeavesList"><p style="text-align:center;color:var(--subtext);padding:14px;font-size:13px">Loading...</p></div>
       </div>
       <div class="card">
         <div class="card-title">Raise a Dispute</div>
@@ -341,6 +365,7 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
     <button class="mgr-tab" onclick="showMgrSection('salary')">💰 Salary</button>
     <button class="mgr-tab" onclick="showMgrSection('holidays')">🎉 Holidays</button>
     <button class="mgr-tab" onclick="showMgrSection('disputes')">⚠️ Disputes <span id="dispBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
+    <button class="mgr-tab" onclick="showMgrSection('leaves')">🏖️ Leaves <span id="leaveBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px">0</span></button>
     <button class="mgr-tab" onclick="showMgrSection('settings')">⚙️ Settings</button>
   </div>
   <div class="mgr-content">
@@ -399,6 +424,13 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
         <button class="mgr-btn-primary" onclick="loadAttAll()" style="margin-top:0">Search</button>
       </div>
       <div id="attTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Select date to view</p></div>
+      <div id="mgrCalCard" class="card" style="display:none;margin-top:14px">
+        <div class="card-title">📅 <span id="mgrCalTitle">Calendar</span></div>
+        <div id="mgrCalendar"></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--subtext)">
+          <span>🟩 Present</span><span>🟥 Absent</span><span>🟧 Late</span><span>🟦 OT Day</span><span>🟪 On Leave</span>
+        </div>
+      </div>
 
       <!-- Manual Attendance Form -->
       <div class="card" style="margin-top:16px">
@@ -506,6 +538,18 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
       </div>
       <div id="dispTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
     </div>
+    <div class="mgr-section" id="mgr-leaves">
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <select id="leaveFilter" onchange="loadLeaves()" style="border:2px solid #e5d9d3;border-radius:10px;padding:10px;font-size:14px;outline:none">
+          <option value="pending">Pending</option>
+          <option value="approved_paid">Approved (Paid)</option>
+          <option value="approved_unpaid">Approved (Unpaid)</option>
+          <option value="rejected">Rejected</option>
+          <option value="">All</option>
+        </select>
+      </div>
+      <div id="leaveTable"><p style="text-align:center;padding:20px;color:var(--subtext)">Loading...</p></div>
+    </div>
     <div class="mgr-section" id="mgr-settings">
       <div class="card">
         <div class="card-title">System Settings</div>
@@ -552,6 +596,11 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
       <canvas class="selfie-canvas" id="selfieCvs"></canvas>
       <div class="selfie-overlay"><div class="capture-btn" onclick="capturePhoto()">📸</div></div>
     </div>
+    <div id="selfieError" style="display:none;text-align:center;padding:20px 10px">
+      <div style="font-size:40px;margin-bottom:12px">📷🚫</div>
+      <div id="selfieErrorMsg" style="font-size:14px;color:var(--dark-gray);margin-bottom:16px;line-height:1.5"></div>
+      <button onclick="startCam()" style="width:100%;padding:14px;background:var(--dark-blue);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">🔄 Try Again</button>
+    </div>
     <div id="selfiePreview" style="display:none">
       <img id="selfieImg" style="border-radius:14px;width:100%;margin-bottom:12px"/>
       <div style="display:flex;gap:10px">
@@ -570,6 +619,12 @@ html,body{min-height:100vh;font-family:'IBM Plex Sans',-apple-system,BlinkMacSys
 <script>
 let EMP=null;
 let lastSalAllData=null;
+function updateOnlineStatus(){
+  document.getElementById("offlineBanner").style.display=navigator.onLine?"none":"block";
+}
+window.addEventListener("online",updateOnlineStatus);
+window.addEventListener("offline",updateOnlineStatus);
+updateOnlineStatus();
 // Escapes free-text user input before inserting into innerHTML — prevents stored XSS
 // from fields like dispute issues/replies where employees/managers type arbitrary text.
 function escapeHtml(str){
@@ -816,7 +871,16 @@ async function startCam(){
     document.getElementById("selfieVid").srcObject=stream;
     document.getElementById("selfieBox").style.display="block";
     document.getElementById("selfiePreview").style.display="none";
-  }catch(e){showToast("Allow camera!","err");closeModal("selfieModal");}
+  }catch(e){
+    let msg="Camera error — try again";
+    if(e.name==="NotAllowedError"||e.name==="PermissionDeniedError"){
+      msg="Camera blocked hai — browser settings mein jaake camera allow karo, phir page reload karo";
+    }else if(e.name==="NotFoundError"){
+      msg="Koi camera nahi mila is device par";
+    }
+    showToast(msg,"err");
+    closeModal("selfieModal");
+  }
 }
 function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
 function capturePhoto(){
@@ -834,7 +898,13 @@ function capturePhoto(){
   stopCam();
 }
 function retakePhoto(){photo=null;document.getElementById("selfieBox").style.display="block";document.getElementById("selfiePreview").style.display="none";startCam();}
-function confirmPhoto(){closeModal("selfieModal");stopCam();checkedIn?doCheckout():doCheckin();}
+let attendanceSubmitting=false;
+function confirmPhoto(){
+  if(attendanceSubmitting)return;
+  attendanceSubmitting=true;
+  closeModal("selfieModal");stopCam();
+  (checkedIn?doCheckout():doCheckin()).finally(()=>{attendanceSubmitting=false;});
+}
 async function doCheckin(){
   const btn=document.getElementById("actionBtn");
   btn.className="action-btn btn-off";
@@ -899,12 +969,11 @@ function showSuccessWithLogout(icon,title,time,det){
   },1000);
 }
 function manualLogout(){if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}closeModal("successModal");doLogout();}
-function renderCalendar(recs, month, year, today){
+function renderCalendar(recs, month, year, today, targetId, joined){
   const recMap={};
   recs.forEach(r=>{ recMap[r.date]=r; });
   const daysInMonth=new Date(year,month,0).getDate();
   const firstDow=new Date(year,month-1,1).getDay();
-  const joined=EMP&&EMP.joined?EMP.joined:null;
   const dowLabels=["S","M","T","W","T","F","S"];
 
   let html='<div class="cal-grid">';
@@ -916,10 +985,12 @@ function renderCalendar(recs, month, year, today){
     let cls="cal-future";
     if(dateStr<=today && (!joined || dateStr>=joined)){
       const r=recMap[dateStr];
-      if(!r || r.status==="absent"){
+      if(r && r.status==="leave"){
+        cls="cal-leave";
+      }else if(!r || r.status==="absent"){
         cls="cal-absent";
       }else{
-        const isLate=r.checkin_status==="manager_zone"||r.checkin_status==="late_deduct";
+        const isLate=r.checkin_status==="manager_zone"||r.checkin_status==="late_deduct"||r.checkin_status==="manager_zone_rejected";
         const hasOT=(parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0))>0;
         cls = isLate ? "cal-late" : (hasOT ? "cal-ot" : "cal-present");
       }
@@ -927,7 +998,7 @@ function renderCalendar(recs, month, year, today){
     html+=`<div class="cal-day ${cls}">${day}</div>`;
   }
   html+='</div>';
-  document.getElementById("histCalendar").innerHTML=html;
+  document.getElementById(targetId).innerHTML=html;
 }
 
 async function loadHistory(){
@@ -949,7 +1020,7 @@ async function loadHistory(){
       fetch("/api/salary?employee_id="+EMP.id+"&month="+month+"&year="+year).then(r=>r.json()),
     ]);
     const recs=a.attendance||[];
-    renderCalendar(recs, month, year, today);
+    renderCalendar(recs, month, year, today, "histCalendar", EMP.joined);
     if(!recs.length){
       document.getElementById("histList").innerHTML='<p style="text-align:center;color:var(--subtext);padding:20px">No records yet</p>';
     }else{
@@ -1014,13 +1085,14 @@ function buildEmployeeReportPDF(emp, month, year, recs, sal, companyName){
   //    falls back to an estimate for manually-entered/not-yet-checked-out days) ──
   const sortedRecs = (recs||[]).slice().sort((a,b)=>(a.date>b.date?1:-1));
   const fallbackDailyRate = (emp.basic||0) / 26;
-  let present=0, absent=0;
+  let present=0, absent=0, onLeave=0;
   let sumBase=0, sumDeduct=0, sumOT=0, sumOTHours=0;
   const dayRows = sortedRecs.map(r=>{
     const dt = new Date((r.date||"")+"T00:00:00Z");
     const dayName = isNaN(dt) ? "—" : DOW[dt.getUTCDay()];
     const isPresent = r.status === "present";
-    if (isPresent) present++; else absent++;
+    const isLeave = r.status === "leave";
+    if (isLeave) onLeave++; else if (isPresent) present++; else absent++;
 
     const otHrs = Math.round((parseFloat(r.early_ot_hours||0)+parseFloat(r.late_ot_hours||0))*100)/100;
     const hasSnapshot = parseFloat(r.earning_total||0) !== 0 || parseFloat(r.earning_basic||0) > 0;
@@ -1038,7 +1110,7 @@ function buildEmployeeReportPDF(emp, month, year, recs, sal, companyName){
 
     return {
       date: r.date, day: dayName,
-      statusLabel: isPresent ? "P Present" : "A Absent",
+      statusLabel: isLeave ? `L On Leave (${r.leave_type||"—"})` : (isPresent ? "P Present" : "A Absent"),
       inT: r.checkin_time || "-", outT: r.checkout_time || "-",
       otHrs, base, deduct, otPay, total, isLate: r.checkin_status==="manager_zone"||r.checkin_status==="late_deduct",
     };
@@ -1086,7 +1158,7 @@ function buildEmployeeReportPDF(emp, month, year, recs, sal, companyName){
   doc.setFontSize(11); doc.setFont(undefined,"bold");
   doc.text("Attendance Summary", 14, y); y+=6;
   doc.setFontSize(9); doc.setFont(undefined,"normal");
-  doc.text(`Present: ${present} | Absent: ${absent} | Half Day: 0 | Attendance: ${attendancePct}% | Marked Days: ${markedDays}`, 14, y);
+  doc.text(`Present: ${present} | Absent: ${absent} | On Leave: ${onLeave} | Half Day: 0 | Attendance: ${attendancePct}% | Marked Days: ${markedDays}`, 14, y);
   y+=10;
 
   // ── Late Entry Details ──
@@ -1184,6 +1256,7 @@ function showMgrSection(s){
   event.target.closest(".mgr-tab").classList.add("active");
   if(s==="approvals") loadApprovals();
   if(s==="disputes") loadDisputes();
+  if(s==="leaves") loadLeaves();
   if(s==="attendance") loadAttAll();
   if(s==="overview") loadOverview();
   if(s==="employees") loadEmployees();
@@ -1248,12 +1321,12 @@ async function deleteHoliday(id,name){
 async function loadDisputes(){
   const status=document.getElementById("dispFilter")?document.getElementById("dispFilter").value:"pending";
   try{
-    const url = status ? "/api/disputes?status="+status : "/api/disputes";
+    const url = status ? "/api/disputes?type=dispute&status="+status : "/api/disputes?type=dispute";
     const res=await fetch(url);
     const d=await res.json();
     const rows=d.disputes||[];
 
-    const pendRes=await fetch("/api/disputes?status=pending");
+    const pendRes=await fetch("/api/disputes?type=dispute&status=pending");
     const pendData=await pendRes.json();
     const pendCount=(pendData.disputes||[]).length;
     const badge=document.getElementById("dispBadge");
@@ -1285,9 +1358,63 @@ async function resolveDispute(id){
   const reply=document.getElementById("reply_"+id).value.trim();
   if(!reply){showToast("Reply likho pehle!","err");return;}
   try{
-    await fetch("/api/disputes",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"resolved",manager_reply:reply})});
+    const res=await fetch("/api/disputes",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"resolved",manager_reply:reply})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||"Failed");
     showToast("✅ Resolved!","ok");
     loadDisputes();
+  }catch(e){showToast("Error: "+e.message,"err");}
+}
+async function loadLeaves(){
+  const status=document.getElementById("leaveFilter")?document.getElementById("leaveFilter").value:"pending";
+  try{
+    const url = status ? "/api/disputes?type=leave&status="+status : "/api/disputes?type=leave";
+    const res=await fetch(url);
+    const d=await res.json();
+    const rows=d.disputes||[];
+
+    const pendRes=await fetch("/api/disputes?type=leave&status=pending");
+    const pendData=await pendRes.json();
+    const pendCount=(pendData.disputes||[]).length;
+    const badge=document.getElementById("leaveBadge");
+    if(pendCount){badge.style.display="inline-block";badge.textContent=pendCount;}
+    else{badge.style.display="none";}
+
+    const tbl=document.getElementById("leaveTable");
+    if(!rows.length){tbl.innerHTML='<p style="text-align:center;padding:20px;color:var(--subtext)">No leave requests</p>';return;}
+    let html="";
+    rows.forEach(r=>{
+      const dateRange=r.end_date&&r.end_date!==r.date?`${escapeHtml(r.date)} to ${escapeHtml(r.end_date)}`:escapeHtml(r.date);
+      const statusLabel=r.status==="pending"?"pending":r.status==="rejected"?"rejected":r.status==="approved_paid"?"approved (paid)":"approved (unpaid)";
+      html+=`<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div><b>${escapeHtml(r.name)}</b> <span style="color:var(--subtext);font-size:12px">(${escapeHtml(r.department||"—")})</span></div>
+          <span class="badge badge-${r.status==="pending"?"pending":r.status==="rejected"?"absent":"present"}">${statusLabel}</span>
+        </div>
+        <div style="font-size:12px;color:var(--subtext);margin-bottom:6px">${dateRange} — ${escapeHtml(r.leave_type||"casual")}</div>
+        ${r.issue?`<div style="font-size:14px;margin-bottom:10px">${escapeHtml(r.issue)}</div>`:""}
+        ${r.manager_reply?`<div style="background:var(--light-green);border-radius:8px;padding:10px;font-size:13px;color:var(--green);margin-bottom:8px">Note: ${escapeHtml(r.manager_reply)}</div>`:""}
+        ${r.status==="pending"?`
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="mgr-btn-success" onclick="decideLeaveUI(${r.id},'approved_paid')">✅ Approve (Paid)</button>
+            <button class="mgr-btn-success" onclick="decideLeaveUI(${r.id},'approved_unpaid')">✅ Approve (Unpaid)</button>
+            <button class="mgr-btn-danger" onclick="decideLeaveUI(${r.id},'rejected')">❌ Reject</button>
+          </div>
+        `:""}
+      </div>`;
+    });
+    tbl.innerHTML=html;
+  }catch(e){document.getElementById("leaveTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+async function decideLeaveUI(id,decision){
+  const note=prompt("Note for employee (optional):","");
+  if(note===null)return;
+  try{
+    const res=await fetch("/api/disputes",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,decision,manager_reply:note.trim()})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||"Failed");
+    showToast(d.message||"Updated!","ok");
+    loadLeaves();
   }catch(e){showToast("Error: "+e.message,"err");}
 }
 async function loadApprovals(){
@@ -1622,6 +1749,7 @@ async function loadAttAll(){
     let html=`<p style="font-size:13px;color:var(--subtext);margin-bottom:12px">Date: ${date} | Present: ${present.length} | Absent: ${absent.length}</p><div style="overflow-x:auto"><table class="mgr-table"><tr><th>Name</th><th>Dept</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>In Photo</th><th>Out Photo</th><th>Action</th></tr>`;
     all.forEach(r=>{
       const ok=r.status==="present";
+      const onLeave=r.status==="leave";
       const wh=r.working_hours?`${Math.floor(r.working_hours)}h ${Math.round((parseFloat(r.working_hours)%1)*60)}m`:"—";
       const empName=escapeHtml(r.name||r.employee_id);
       let inThumb="—",outThumb="—";
@@ -1635,14 +1763,40 @@ async function loadAttAll(){
         attPhotoData[key]={src:r.checkout_selfie_base64,label:`${empName} — Check-out (${r.checkout_time||"—"})`};
         outThumb=`<img src="${r.checkout_selfie_base64}" style="width:42px;height:42px;border-radius:8px;object-fit:cover;cursor:pointer;border:2px solid var(--orange)" onclick="zoomPhoto('${key}')"/>`;
       }
-      const disapproveBtn=ok?`<button class="mgr-btn-danger" onclick="disapproveAttendance('${r.employee_id}','${date}','${(r.name||r.employee_id).replace(/'/g,"")}')">❌ Disapprove</button>`:"—";
+      const disapproveBtn=(ok&&!onLeave)?`<button class="mgr-btn-danger" onclick="disapproveAttendance('${r.employee_id}','${date}','${(r.name||r.employee_id).replace(/'/g,"")}')">❌ Disapprove</button>`:"—";
       const disapproved=r.checkin_status==="disapproved";
-      const statusLabel=ok?"Present":(disapproved?"Disapproved":"Absent");
-      html+=`<tr><td><b>${empName}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${ok?"present":"absent"}">${statusLabel}</span></td><td>${inThumb}</td><td>${outThumb}</td><td>${disapproveBtn}</td></tr>`;
+      const statusLabel=onLeave?`On Leave (${escapeHtml(r.leave_type||"")})`:ok?"Present":(disapproved?"Disapproved":"Absent");
+      const badgeCls=onLeave?"pending":ok?"present":"absent";
+      html+=`<tr><td><b>${empName}</b></td><td>${escapeHtml(r.department||"—")}</td><td>${r.checkin_time||"—"}</td><td>${r.checkout_time||"—"}</td><td>${wh}</td><td><span class="badge badge-${badgeCls}">${statusLabel}</span></td><td>${inThumb}</td><td>${outThumb}</td><td>${disapproveBtn}</td></tr>`;
     });
     html+="</table></div>";
     document.getElementById("attTable").innerHTML=html;
+
+    if(empFilter){
+      await loadMgrCalendarView(empFilter, date);
+    }else{
+      document.getElementById("mgrCalCard").style.display="none";
+    }
   }catch(e){document.getElementById("attTable").innerHTML=`<p style="color:var(--red);padding:20px">❌ ${e.message}</p>`;}
+}
+async function loadMgrCalendarView(empId, dateStr){
+  try{
+    const [y,m] = dateStr.split("-").map(Number);
+    const [empRes, attRes] = await Promise.all([
+      fetch("/api/employees?id="+empId).then(r=>r.json()),
+      fetch(`/api/attendance?employee_id=${empId}&month=${m}&year=${y}`).then(r=>r.json()),
+    ]);
+    const emp=(empRes.employees||[])[0]||{};
+    const recs=attRes.attendance||[];
+    const ist=new Date(Date.now()+5.5*60*60*1000);
+    const today=ist.toISOString().split("T")[0];
+    const MONS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById("mgrCalTitle").textContent=`${emp.name||empId} — ${MONS[m-1]} ${y}`;
+    renderCalendar(recs, m, y, today, "mgrCalendar", emp.joining_date);
+    document.getElementById("mgrCalCard").style.display="block";
+  }catch(e){
+    document.getElementById("mgrCalCard").style.display="none";
+  }
 }
 async function disapproveAttendance(empId,date,name){
   if(!confirm(`Disapprove ${name}'s attendance for ${date}?\n\nThis will mark the day ABSENT and reverse any salary already credited for it. This cannot be undone.`))return;
@@ -1943,12 +2097,12 @@ function showPage(p){
   document.getElementById("page-"+p).classList.add("active");
   document.getElementById("nav-"+p).classList.add("active");
   if(p==="history")loadHistory();
-  if(p==="profile")loadMyDisputes();
+  if(p==="profile"){loadMyDisputes();loadMyLeaves();}
 }
 async function loadMyDisputes(){
   if(!EMP)return;
   try{
-    const res=await fetch("/api/disputes?employee_id="+EMP.id);
+    const res=await fetch("/api/disputes?employee_id="+EMP.id+"&type=dispute");
     const d=await res.json();
     const rows=d.disputes||[];
     if(!rows.length){document.getElementById("myDisputesList").innerHTML='<p style="text-align:center;color:var(--subtext);padding:14px;font-size:13px">No disputes yet</p>';return;}
@@ -1967,17 +2121,90 @@ async function loadMyDisputes(){
     document.getElementById("myDisputesList").innerHTML=html;
   }catch(e){document.getElementById("myDisputesList").innerHTML=`<p style="color:var(--red);font-size:12px;padding:10px">❌ ${e.message}</p>`;}
 }
+async function loadMyLeaves(){
+  if(!EMP)return;
+  try{
+    const res=await fetch("/api/disputes?employee_id="+EMP.id+"&type=leave");
+    const d=await res.json();
+    const rows=d.disputes||[];
+    if(!rows.length){document.getElementById("myLeavesList").innerHTML='<p style="text-align:center;color:var(--subtext);padding:14px;font-size:13px">No leave requests yet</p>';return;}
+    let html="";
+    rows.forEach(r=>{
+      const isPending=r.status==="pending";
+      const isRejected=r.status==="rejected";
+      const statusLabel=isPending?"Pending":isRejected?"Rejected":(r.status==="approved_paid"?"Approved (Paid)":"Approved (Unpaid)");
+      const statusColor=isPending?"var(--yellow)":isRejected?"var(--red)":"var(--green)";
+      const statusBg=isPending?"var(--light-yellow)":isRejected?"var(--light-red)":"var(--light-green)";
+      const dateRange=r.end_date&&r.end_date!==r.date?`${escapeHtml(r.date)} to ${escapeHtml(r.end_date)}`:escapeHtml(r.date);
+      html+=`<div style="padding:12px 0;border-bottom:1px solid var(--gray)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--subtext)">${dateRange} — ${escapeHtml(r.leave_type||"casual")}</span>
+          <span class="badge" style="background:${statusBg};color:${statusColor}">${statusLabel}</span>
+        </div>
+        ${r.issue?`<div style="font-size:13px;margin-bottom:4px">${escapeHtml(r.issue)}</div>`:""}
+        ${r.manager_reply?`<div style="font-size:12px;color:${statusColor};background:${statusBg};border-radius:8px;padding:8px;margin-top:6px">👤 Manager: ${escapeHtml(r.manager_reply)}</div>`:""}
+      </div>`;
+    });
+    document.getElementById("myLeavesList").innerHTML=html;
+  }catch(e){document.getElementById("myLeavesList").innerHTML=`<p style="color:var(--red);font-size:12px;padding:10px">❌ ${e.message}</p>`;}
+}
+function onLeaveDateChange(){
+  const start=document.getElementById("leaveStart").value;
+  const end=document.getElementById("leaveEnd").value;
+  const endInput=document.getElementById("leaveEnd");
+  const countEl=document.getElementById("leaveDayCount");
+  if(start && (!end || end<start)){
+    endInput.value=start;
+  }
+  const s=document.getElementById("leaveStart").value;
+  const e=document.getElementById("leaveEnd").value;
+  if(s && e && e>=s){
+    const days=Math.round((new Date(e)-new Date(s))/86400000)+1;
+    countEl.textContent=`📅 ${days} din ki leave`;
+  }else{
+    countEl.textContent="";
+  }
+}
+async function submitLeave(){
+  const start=document.getElementById("leaveStart").value;
+  const end=document.getElementById("leaveEnd").value;
+  const leaveType=document.getElementById("leaveType").value;
+  const reason=document.getElementById("leaveReason").value.trim();
+  if(!start||!end){showToast("Start aur end date dono chuno!","err");return;}
+  if(end<start){showToast("End date start date se pehle nahi ho sakti!","err");return;}
+  const btn=event.target;
+  const orig=btn.textContent;
+  btn.disabled=true; btn.textContent="Sending...";
+  try{
+    const res=await fetch("/api/disputes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"leave",employee_id:EMP.id,start_date:start,end_date:end,leave_type:leaveType,reason})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||"Failed");
+    showToast("✅ Leave request sent!","ok");
+    document.getElementById("leaveStart").value="";
+    document.getElementById("leaveEnd").value="";
+    document.getElementById("leaveReason").value="";
+    document.getElementById("leaveDayCount").textContent="";
+    loadMyLeaves();
+  }catch(e){showToast("Error: "+e.message,"err");}
+  finally{btn.disabled=false; btn.textContent=orig;}
+}
 async function submitDispute(){
   const txt=document.getElementById("disputeText").value.trim();
   if(!txt){showToast("Issue likho pehle!","err");return;}
+  const btn=event.target;
+  const orig=btn.textContent;
+  btn.disabled=true; btn.textContent="Sending...";
   try{
     const ist=new Date(Date.now()+5.5*60*60*1000);
     const today=ist.toISOString().split("T")[0];
-    await fetch("/api/disputes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:EMP.id,date:today,issue:txt})});
+    const res=await fetch("/api/disputes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:EMP.id,date:today,issue:txt})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||"Failed");
     showToast("✅ Sent to manager!","ok");
     document.getElementById("disputeText").value="";
     loadMyDisputes();
   }catch(e){showToast("Error: "+e.message,"err");}
+  finally{btn.disabled=false; btn.textContent=orig;}
 }
 function openModal(id){document.getElementById(id).classList.add("show");}
 function closeModal(id){
@@ -1988,7 +2215,9 @@ function showToast(msg,type=""){
   const t=document.getElementById("toast");
   t.textContent=msg;t.className="toast"+(type?" "+type:"");
   t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),3000);
+  const duration=Math.min(6000,Math.max(3000,msg.length*70));
+  clearTimeout(t._hideTimer);
+  t._hideTimer=setTimeout(()=>t.classList.remove("show"),duration);
 }
 function fmtHrs(h){return`${Math.floor(h)}h ${Math.round((h%1)*60)}m`;}
 function fmtMins(m){if(!m||m<=0)return"—";return`${Math.floor(m/60)}h ${m%60}m`;}
